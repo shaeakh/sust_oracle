@@ -82,6 +82,7 @@ export function Navbar() {
     if (t_token) {
       setIsLoggedIn(true);
       fetch_user_info();
+      console.log(userinfo);
     } else {
       setIsLoggedIn(false);
     }
@@ -189,12 +190,12 @@ export function Navbar() {
                         Profile
                       </DropdownMenuRadioItem>
                     </Link>
-                    <Link href="/forum">
+                    <Link href="/community">
                       <DropdownMenuRadioItem
                         className=" active:text-white focus:text-white"
                         value="Forum"
                       >
-                        Forum
+                        Community
                       </DropdownMenuRadioItem>
                     </Link>
                     <Link href="/admin_panel">

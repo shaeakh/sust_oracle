@@ -85,8 +85,24 @@ export function MeetingDialog({
             </ScrollArea>
           </div>
 
-          <div className="flex justify-end">
-            <Button variant="outline" onClick={() => onOpenChange(false)}>
+          <div className="flex justify-end font-bold space-x-2">
+            <Button
+              className="hover:bg-green-500 hover:text-white"
+              variant="outline"
+            >
+              Edit
+            </Button>
+            <Button
+              className="hover:bg-red-500 hover:text-white"
+              variant="outline"
+            >
+              Delete
+            </Button>
+            <Button
+              className=" hover:text-white"
+              variant="outline"
+              onClick={() => onOpenChange(false)}
+            >
               Close
             </Button>
           </div>
