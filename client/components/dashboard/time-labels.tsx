@@ -17,7 +17,7 @@ interface TimeLabelsProps {
 export function TimeLabels({ meetings }: TimeLabelsProps) {
   // State for start and end hours
   const [startHour, setStartHour] = useState<number>(9); // Default to 9 AM
-  const [endHour, setEndHour] = useState<number>(18); // Default to 6 PM
+  const [endHour, setEndHour] = useState<number>(22); // Default to 6 PM
 
   // Generate an array of hours between startHour and endHour
   const hours = useMemo(
