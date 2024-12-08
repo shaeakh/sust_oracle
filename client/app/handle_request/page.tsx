@@ -77,20 +77,23 @@ function Page() {
   const handleAccept = async (id: number) => {
     setProcessingId(id);
     try {
-      await axios.post(
-        `${process.env.NEXT_PUBLIC_IP_ADD}/schedules/accept/${id}`,
-        {},
-        {
-          headers: {
-            Authorization: `Bearer ${localStorage.getItem("token")}`,
-          },
-        }
-      );
+      await axios
+        .post(
+          `${process.env.NEXT_PUBLIC_IP_ADD}/session/approve/${id}`,
+          {},
+          {
+            headers: {
+              Authorization: `Bearer ${localStorage.getItem("token")}`,
+            },
+          }
+        )
+        .then(() => {
+          fetchRequests();
+        });
       toast({
         title: "Success",
         description: "Request accepted successfully",
       });
-      fetchRequests();
     } catch (error) {
       toast({
         title: "Error",
@@ -105,19 +108,19 @@ function Page() {
   const handleDelete = async (id: number) => {
     setProcessingId(id);
     try {
-      await axios.delete(
-        `${process.env.NEXT_PUBLIC_IP_ADD}/schedules/reject/${id}`,
-        {
+      await axios
+        .delete(`${process.env.NEXT_PUBLIC_IP_ADD}/session/${id}`, {
           headers: {
             Authorization: `Bearer ${localStorage.getItem("token")}`,
           },
-        }
-      );
+        })
+        .then(() => {
+          fetchRequests();
+        });
       toast({
         title: "Success",
         description: "Request rejected successfully",
       });
-      fetchRequests();
     } catch (error) {
       toast({
         title: "Error",
