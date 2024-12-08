@@ -4,6 +4,7 @@ import { ForumPost } from "@/components/forum/post/ForumPost";
 import axios from "axios";
 import { useEffect, useState } from "react";
 import { toast } from "react-toastify";
+
 interface status {
   user_name: string;
   user_image: string | undefined;
@@ -17,7 +18,7 @@ interface status {
   down: number;
 }
 
-function page() {
+function Page() {
   const [posts, setPosts] = useState<status[]>([]);
   const fetch_all_posts = () => {
     axios
@@ -46,7 +47,11 @@ function page() {
       <div className="container mx-auto max-w-7xl px-4">
         <div className="flex flex-wrap justify-start gap-5 p-5">
           {posts.map((post) => (
-            <FancyPostCard fetch_all_posts={fetch_all_posts} key={post.post_id} post={post} />
+            <FancyPostCard
+              fetch_all_posts={fetch_all_posts}
+              key={post.post_id}
+              post={post}
+            />
           ))}
         </div>
       </div>
@@ -54,4 +59,4 @@ function page() {
   );
 }
 
-export default page;
+export default Page;

@@ -82,6 +82,7 @@ export function Navbar() {
     if (t_token) {
       setIsLoggedIn(true);
       fetch_user_info();
+      console.log(userinfo);
     } else {
       setIsLoggedIn(false);
     }
