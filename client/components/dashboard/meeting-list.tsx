@@ -70,9 +70,7 @@ export function MeetingList({ meetings }: MeetingListProps) {
                     top: `${top}%`,
                     height: `${height}%`,
                   }}
-                >
-                  {/* <MeetingCard meeting={meeting} onClick={handleMeetingClick} /> */}
-                </div>
+                ></div>
               );
             })}
           </div>
