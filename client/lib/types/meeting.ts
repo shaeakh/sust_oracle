@@ -6,9 +6,7 @@ export interface User {
 export interface Meeting {
   id: number;
   title: string;
-  url: string;
-  stime: Date;
-  etime: Date;
-  user: User[];
-  location: string;
+  time: string;
+  duration: string;
+  status: 'scheduled' | 'pending';
 }
