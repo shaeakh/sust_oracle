@@ -33,11 +33,11 @@ async function createTables() {
                 CONSTRAINT no_overlap UNIQUE (user_id, start_time, end_time)
             );
 
-
             CREATE TABLE IF NOT EXISTS sessions (
               id SERIAL PRIMARY KEY,
               host_id INT NOT NULL REFERENCES users(uid),
               guest_id INT NOT NULL REFERENCES users(uid),
+              schedule_id INT NOT NULL REFERENCES schedules(id),
               start_time TIMESTAMP NOT NULL,
               end_time TIMESTAMP NOT NULL,
               title VARCHAR(255),

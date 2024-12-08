@@ -113,6 +113,10 @@ const getScheduleById = async (req, res) => {
         const values = [schedule_id, uid];
         const result = await pool.query(query, values);
 
+        if (result.rows.length === 0) {
+            return res.status(404).json({ message: "Schedule not found" });
+        }
+
         // Return the schedule in the expected format
         const schedule = result.rows[0];
         res.status(200).json({
