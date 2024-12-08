@@ -7,54 +7,7 @@ import { Meeting } from "@/lib/types/meeting";
 import axios from "axios";
 import { Calendar } from "lucide-react";
 import { useEffect, useState } from "react";
-
-const meetings: Meeting[] = [
-  {
-    id: 1,
-    host_id: 1,
-    schedule_id: 31,
-    title: "Weekly Team Sync",
-    meeting_url: "https://zoom.us/j/123456789",
-    stime: "2024-12-09T04:00:00.000Z",
-    etime: "2024-12-09T05:00:00.000Z",
-    status: true,
-    user: [
-      { id: 1, username: "Nixon Deb Antu" },
-      { id: 2, username: "John Doe" },
-      { id: 3, username: "Jane Smith" },
-      { id: 4, username: "Alice Johnson" },
-    ],
-  },
-  {
-    id: 2,
-    host_id: 1,
-    schedule_id: 32,
-    title: "Product Review",
-    meeting_url: "https://zoom.us/j/987654321",
-    stime: "2024-12-09T08:00:00.000Z",
-    etime: "2024-12-09T09:30:00.000Z",
-    status: true,
-    user: [
-      { id: 1, username: "Nixon Deb Antu" },
-      { id: 5, username: "Bob Wilson" },
-    ],
-  },
-  {
-    id: 3,
-    host_id: 2,
-    schedule_id: 33,
-    title: "Client Presentation",
-    meeting_url: "https://zoom.us/j/456789123",
-    stime: "2024-12-09T10:00:00.000Z",
-    etime: "2024-12-09T13:00:00.000Z",
-    status: true,
-    user: [
-      { id: 1, username: "Nixon Deb Antu" },
-      { id: 2, username: "John Doe" },
-      { id: 6, username: "Carol Brown" },
-    ],
-  },
-];
+import { toast } from "react-toastify";
 
 const i_m: Meeting = {
   id: 0,
@@ -70,14 +23,24 @@ const i_m: Meeting = {
 
 export default function Home() {
   const [m, setM] = useState<Meeting[]>([]);
+  const uid = localStorage.getItem("uid");
   const fetch_data = () => {
-    axios.get(`${process.env.NEXT_PUBLIC_IP_ADD}/session`,{
-      headers: {
-        Authorization: `Bearer ${localStorage.getItem("token")}`,
-      },
-    }).then((res)=>{
-      setM(res.data);
-    });
+    axios
+      .get(`${process.env.NEXT_PUBLIC_IP_ADD}/session/custom/${uid}`, {
+        headers: {
+          Authorization: `Bearer ${localStorage.getItem("token")}`,
+        },
+      })
+      .then((res) => {
+        if (res.status >= 200 && res.status < 300) {
+          setM(res.data || []);
+        } else {
+          toast(res?.data?.message || "Failed to fetch meetings");
+        }
+      })
+      .catch((err) => {
+        toast(err?.response?.data?.message || "Failed to fetch meetings");
+      });
   };
   useEffect(() => {
     fetch_data();
@@ -107,14 +70,14 @@ export default function Home() {
                   <Calendar className="h-4 w-4 text-muted-foreground" />
                 </CardHeader>
                 <CardContent>
-                  <div className="text-2xl font-bold">3</div>
+                  <div className="text-2xl font-bold">{m.length}</div>
                 </CardContent>
               </Card>
             </div>
           </main>
           <div className="container mx-auto py-8">
             <h1 className="mb-8 text-3xl font-bold">Today&apos;s Meetings</h1>
-            <MeetingList meetings={meetings} />
+            <MeetingList meetings={m} />
           </div>
         </div>
       </div>
