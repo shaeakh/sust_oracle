@@ -4,6 +4,7 @@ const express = require("express");
 const { connectToDB } = require("./db/dbconnect");
 const { createTables } = require("./db/tables");
 const authRouter = require("./routes/auth");
+const userRouter = require("./routes/user");
 
 const app = express();
 const PORT = 5050;
@@ -21,6 +22,7 @@ app.get("/", (req, res) => {
 });
 
 app.use("/auth", authRouter);
+app.use("/user", userRouter);
 
 app.listen(PORT, async () => {
   await connectToDB();
