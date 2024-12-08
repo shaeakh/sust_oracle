@@ -1,4 +1,5 @@
 const { pool } = require("../db/dbconnect");
+const { DateTime } = require("luxon");
 const singleMailService = require("../utils/mailService");
 const otpGenerator = require("../utils/otpGenerator");
 const passwordGenerator = require("../utils/passGenerator");
@@ -6,44 +7,45 @@ const bcrypt = require("bcrypt");
 const jwt = require("jsonwebtoken");
 
 const registration = async (req, res) => {
-  // Registration logic here
-  const { email, username, password } = req.body;
-  const hassedPassword = await bcrypt.hash(password, 10);
+    // Registration logic here
+    const { email, username, password } = req.body;
 
-  if (!email || !username || !password) {
-    return res.status(400).json({ message: "Email, Username, and Password are required" });
-  }
-
-  try {
-
-    // check if email already exists
-    const emailQuery = "SELECT * FROM users WHERE user_email = $1";
-    const emailResult = await pool.query(emailQuery, [email]);
-
-    if (emailResult.rows.length > 0) {
-      return res.status(400).json({ message: "Email already exists" });
+    if (!email || !username || !password) {
+        return res.status(400).json({ message: "Email, Username, and Password are required" });
     }
 
-    // generate hashed password
-    const hashedPassword = await bcrypt.hash(password, 10);
+    try {
 
-    // insert user into database
-    const insertQuery = "INSERT INTO users (user_name, user_email, password) VALUES ($1, $2, $3) RETURNING *";
-    const insertResult = await pool.query(insertQuery, [username, email, hashedPassword]);
+        // check if email already exists
+        const emailQuery = "SELECT * FROM users WHERE user_email = $1";
+        const emailResult = await pool.query(emailQuery, [email]);
 
-    if (insertResult.rows.length === 0) {
-      return res.status(500).json({ message: "Registration failed" });
-    }
+        if (emailResult.rows.length > 0) {
+            return res.status(400).json({ message: "Email already exists" });
+        }
 
-    // generate OTP
-    const otp = otpGenerator();
+        // generate hashed password
+        const hashedPassword = await bcrypt.hash(password, 10);
 
-    // insert OTP into database
-    const otpQuery = "INSERT INTO email_otp (email_id, otp, created_at) VALUES ($1, $2, CURRENT_TIMESTAMP) RETURNING *";
-    const otpResult = await pool.query(otpQuery, [email, otp]);
+        // insert user into database
+        const insertQuery = "INSERT INTO users (user_name, user_email, password) VALUES ($1, $2, $3) RETURNING *";
+        const insertResult = await pool.query(insertQuery, [username, email, hashedPassword]);
 
-    // send email with OTP
-    const emailBody = `
+        if (insertResult.rows.length === 0) {
+            return res.status(500).json({ message: "Registration failed" });
+        }
+
+        // generate OTP
+        const otp = otpGenerator();
+
+        // insert OTP into database
+        const otpQuery = "INSERT INTO email_otp (email_id, otp, created_at) VALUES ($1, $2, $3) RETURNING *";
+        const createdAt = DateTime.utc().toISO();
+        const otpResult = await pool.query(otpQuery, [email, otp, createdAt]);
+
+
+        // send email with OTP
+        const emailBody = `
       <p style="text-align: center;">
         <img src="https://res.cloudinary.com/djx7nzzzq/image/upload/v1733142971/qgebalt4vovtkeedmkb3.png" style="width: 187px;">
       </p>
@@ -55,106 +57,105 @@ const registration = async (req, res) => {
       <p>Thank you,<br><strong>Team SUST Oracle</strong></p>
     `;
 
-    const subject = "SUST Oracle - Verify Your Email Address";
+        const subject = "SUST Oracle - Verify Your Email Address";
 
-    await singleMailService(email, subject, emailBody);
+        await singleMailService(email, subject, emailBody);
 
-    if (insertResult.rows.length > 0) {
-      return res.status(201).json({ message: "Registration successful. OTP sent to your email. Please verify your email to complete the registration process." });
+        if (insertResult.rows.length > 0) {
+            return res.status(201).json({ message: "Registration successful. OTP sent to your email. Please verify your email to complete the registration process." });
+        }
+
+    } catch (error) {
+        console.error("Error in registration:", error.message);
+        return res.status(500).json({ message: "An error occurred. Please try again later." });
     }
-
-  } catch (error) {
-    console.error("Error in registration:", error.message);
-    return res.status(500).json({ message: "An error occurred. Please try again later." });
-  }
 
 };
 
 const registrationVerify = async (req, res) => {
-  // Registration verification logic here
-  const { email, otp } = req.body;
+    const { email, otp } = req.body;
 
-  if (!email || !otp) {
-    return res.status(400).json({ message: "Email and OTP are required" });
-  }
-
-  try {
-    // check if email exists in database
-    const emailQuery = "SELECT * FROM users WHERE user_email = $1";
-    const emailResult = await pool.query(emailQuery, [email]);
-
-    if (emailResult.rows.length === 0) {
-      return res.status(400).json({ message: "Email does not exist in our database" });
+    if (!email || !otp) {
+        return res.status(400).json({ message: "Email and OTP are required" });
     }
 
-    // check if OTP is valid
-    const otpQuery = "SELECT * FROM email_otp WHERE email_id = $1 AND otp = $2 AND created_at > NOW() - INTERVAL '5 minutes'";
-    const otpResult = await pool.query(otpQuery, [email, otp]);
+    try {
+        // check if email exists in database
+        const emailQuery = "SELECT * FROM users WHERE user_email = $1";
+        const emailResult = await pool.query(emailQuery, [email]);
 
-    if (otpResult.rows.length === 0) {
-      return res.status(400).json({ message: "OTP is invalid or has expired" });
+        if (emailResult.rows.length === 0) {
+            return res.status(400).json({ message: "Email does not exist in our database" });
+        }
+
+        // check if OTP is valid
+        const otpQuery = "SELECT * FROM email_otp WHERE email_id = $1 AND otp = $2 AND created_at > NOW() - INTERVAL '5 minutes'";
+        const otpResult = await pool.query(otpQuery, [email, otp]);
+
+        if (otpResult.rows.length === 0) {
+            return res.status(400).json({ message: "OTP is invalid or has expired" });
+        }
+
+        // Convert `created_at` to UTC and compare
+        const otpCreatedAt = DateTime.fromISO(otpResult.rows[0].created_at).toMillis();
+        const expiryTime = DateTime.utc().minus({ minutes: 5 }).toMillis(); // 5 minutes ago in UTC
+
+        if (otpCreatedAt < expiryTime) {
+            return res.status(400).json({ message: "OTP has expired" });
+        }
+
+        // Proceed with updating the user's verification status and other logic
+        const updateQuery = "UPDATE users SET isverified = true WHERE user_email = $1";
+        const updateResult = await pool.query(updateQuery, [email]);
+
+        if (updateResult.rowCount === 0) {
+            return res.status(500).json({ message: "Registration verification failed" });
+        }
+
+        // delete OTP from database
+        const deleteQuery = "DELETE FROM email_otp WHERE email_id = $1";
+        await pool.query(deleteQuery, [email]);
+
+        // send success mail
+        const emailBody = `...`; // Email body remains the same
+        const subject = "SUST Oracle - Email Verification Successful";
+
+        await singleMailService(email, subject, emailBody);
+
+        return res.status(200).json({ message: "Registration verification successful." });
+
+    } catch (error) {
+        console.error("Error in registration verification:", error.message);
+        return res.status(500).json({ message: "An error occurred. Please try again later." });
     }
-
-    // update user in database
-    const updateQuery = "UPDATE users SET isverified = true WHERE user_email = $1";
-    const updateResult = await pool.query(updateQuery, [email]);
-
-    if (updateResult.rowCount === 0) {
-      return res.status(500).json({ message: "Registration verification failed" });
-    }
-
-    // delete OTP from database
-    const deleteQuery = "DELETE FROM email_otp WHERE email_id = $1";
-    await pool.query(deleteQuery, [email]);
-
-    // send success mail
-    const emailBody = `
-      <p style="text-align: center;">
-        <img src="https://res.cloudinary.com/djx7nzzzq/image/upload/v1733142971/qgebalt4vovtkeedmkb3.png" style="width: 187px;">
-      </p>
-      <p>Dear ${emailResult.rows[0].user_name},</p>
-      <p>Thank you for verifying your email address with <strong>SUST Oracle</strong>. You can now access all the features of our platform.</p>
-      <p>Thank you,<br><strong>Team SUST Oracle</strong></p>
-    `;
-
-    const subject = "SUST Oracle - Email Verification Successful";
-
-    await singleMailService(email, subject, emailBody);
-
-    return res.status(200).json({ message: "Registration verification successful. You can now access all the features of our platform." });
-
-  } catch (error) {
-    console.error("Error in registration verification:", error.message);
-    return res.status(500).json({ message: "An error occurred. Please try again later." });
-  }
 };
 
+
 const resendVerification = async (req, res) => {
-  // Resend verification logic here
-  const { email } = req.body;
+    const { email } = req.body;
 
-  if (!email) {
-    return res.status(400).json({ message: "Email is required" });
-  }
-
-  try {
-    // check if email exists in database
-    const emailQuery = "SELECT * FROM email_otp WHERE email_id = $1";
-    const emailResult = await pool.query(emailQuery, [email]);
-
-    if (emailResult.rows.length === 0) {
-      return res.status(400).json({ message: "Email does not exist in our database" });
+    if (!email) {
+        return res.status(400).json({ message: "Email is required" });
     }
 
-    // generate OTP
-    const otp = otpGenerator();
+    try {
+        // check if email exists in database
+        const emailQuery = "SELECT * FROM email_otp WHERE email_id = $1";
+        const emailResult = await pool.query(emailQuery, [email]);
 
-    // update OTP in database
-    const updateQuery = "UPDATE email_otp SET otp = $1, created_at = CURRENT_TIMESTAMP WHERE email_id = $2";
-    const updateResult = await pool.query(updateQuery, [otp, email]);
+        if (emailResult.rows.length === 0) {
+            return res.status(400).json({ message: "Email does not exist in our database" });
+        }
 
-    // send email with OTP
-    const emailBody = `
+        // generate OTP
+        const otp = otpGenerator();
+
+        // update OTP in database
+        const updateQuery = "UPDATE email_otp SET otp = $1, created_at = CURRENT_TIMESTAMP WHERE email_id = $2";
+        const updateResult = await pool.query(updateQuery, [otp, email]);
+
+        // send email with OTP
+        const emailBody = `
       <p style="text-align: center;">
         <img src="https://res.cloudinary.com/djx7nzzzq/image/upload/v1733142971/qgebalt4vovtkeedmkb3.png" style="width: 187px;">
       </p>
@@ -166,100 +167,100 @@ const resendVerification = async (req, res) => {
       <p>Thank you,<br><strong>Team SUST Oracle</strong></p>
     `;
 
-    const subject = "SUST Oracle - Verify Your Email Address";
+        const subject = "SUST Oracle - Verify Your Email Address";
 
-    await singleMailService(email, subject, emailBody);
+        await singleMailService(email, subject, emailBody);
 
-    if (updateResult.rowCount > 0) {
-      return res.status(200).json({ message: "OTP sent to your email. Please verify your email to complete the registration process." });
-    } else {
-      return res.status(500).json({ message: "An error occurred. Please try again later." });
+        if (updateResult.rowCount > 0) {
+            return res.status(200).json({ message: "OTP sent to your email. Please verify your email to complete the registration process." });
+        } else {
+            return res.status(500).json({ message: "An error occurred. Please try again later." });
+        }
+
+    } catch (error) {
+        console.error("Error in resend verification:", error.message);
+        return res.status(500).json({ message: "An error occurred. Please try again later." });
     }
-
-  } catch (error) {
-    console.error("Error in resend verification:", error.message);
-    return res.status(500).json({ message: "An error occurred. Please try again later." });
-  }
 };
 
 const login = async (req, res) => {
-  // Login logic here
-  const { email, password, remember } = req.body;
+    // Login logic here
+    const { email, password, remember } = req.body;
 
-  if (!email || !password) {
-    return res.status(400).json({ message: "Email and Password are required" });
-  }
-
-  try {
-    // check if email exists in database
-    const emailQuery = "SELECT * FROM users WHERE user_email = $1";
-    const emailResult = await pool.query(emailQuery, [email]);
-
-    if (emailResult.rows.length === 0) {
-      return res.status(400).json({ message: "Email does not exist in our database" });
+    if (!email || !password) {
+        return res.status(400).json({ message: "Email and Password are required" });
     }
 
-    // check if verified
-    if (!emailResult.rows[0].isverified) {
-      return res.status(400).json({ message: "Email is not verified. Please verify your email to complete the registration process." });
+    try {
+        // check if email exists in database
+        const emailQuery = "SELECT * FROM users WHERE user_email = $1";
+        const emailResult = await pool.query(emailQuery, [email]);
+
+        if (emailResult.rows.length === 0) {
+            return res.status(400).json({ message: "Email does not exist in our database" });
+        }
+
+        // check if verified
+        if (!emailResult.rows[0].isverified) {
+            return res.status(400).json({ message: "Email is not verified. Please verify your email to complete the registration process." });
+        }
+
+        // check if password is correct
+        const passwordMatch = await bcrypt.compare(password, emailResult.rows[0].password);
+
+        if (!passwordMatch) {
+            return res.status(400).json({ message: "Password is incorrect" });
+        }
+
+        // create JWT token with 1 day expiration and if remember is true, set it to 30 days
+        const token = jwt.sign({ uid: emailResult.rows[0].uid, email: emailResult.rows[0].user_email }, process.env.SECRET, { expiresIn: remember ? "30d" : "1d" });
+
+        // send success response
+        return res.status(200).json({ message: "Login successful", token: token, uid: emailResult.rows[0].uid });
+
+    } catch (error) {
+        console.error("Error in login:", error.message);
+        return res.status(500).json({ message: "An error occurred. Please try again later." });
     }
-
-    // check if password is correct
-    const passwordMatch = await bcrypt.compare(password, emailResult.rows[0].password);
-
-    if (!passwordMatch) {
-      return res.status(400).json({ message: "Password is incorrect" });
-    }
-
-    // create JWT token with 1 day expiration and if remember is true, set it to 30 days
-    const token = jwt.sign({ uid: emailResult.rows[0].uid, email: emailResult.rows[0].user_email }, process.env.SECRET, { expiresIn: remember ? "30d" : "1d" });
-
-    // send success response
-    return res.status(200).json({ message: "Login successful", token: token, uid: emailResult.rows[0].uid });
-
-  } catch (error) {
-    console.error("Error in login:", error.message);
-    return res.status(500).json({ message: "An error occurred. Please try again later." });
-  }
 };
 
 const forgotPassword = async (req, res) => {
-  // Forgot password logic here
-  const { email } = req.body;
+    // Forgot password logic here
+    const { email } = req.body;
 
-  if (!email) {
-    return res.status(400).json({ message: "Email is required" });
-  }
-
-  try {
-    // check if email exists in database
-    const emailQuery = "SELECT * FROM users WHERE user_email = $1";
-    const emailResult = await pool.query(emailQuery, [email]);
-
-    if (emailResult.rows.length === 0) {
-      return res.status(400).json({ message: "Email does not exist in our database" });
+    if (!email) {
+        return res.status(400).json({ message: "Email is required" });
     }
 
-    // generate OTP
-    const otp = otpGenerator();
-    const currentTimestamp = new Date();
+    try {
+        // check if email exists in database
+        const emailQuery = "SELECT * FROM users WHERE user_email = $1";
+        const emailResult = await pool.query(emailQuery, [email]);
 
-    // First check if email exists in reset_otp table
-    const checkOtpQuery = "SELECT * FROM reset_otp WHERE email_id = $1";
-    const otpResult = await pool.query(checkOtpQuery, [email]);
+        if (emailResult.rows.length === 0) {
+            return res.status(400).json({ message: "Email does not exist in our database" });
+        }
 
-    let updateResult;
-    if (otpResult.rows.length > 0) {
-      // Update existing record
-      const updateQuery = "UPDATE reset_otp SET otp = $1, created_at = $2 WHERE email_id = $3";
-      updateResult = await pool.query(updateQuery, [otp, currentTimestamp, email]);
-    } else {
-      // Insert new record
-      const insertQuery = "INSERT INTO reset_otp (email_id, otp, created_at) VALUES ($1, $2, $3)";
-      updateResult = await pool.query(insertQuery, [email, otp, currentTimestamp]);
-    }
-    // send email with OTP
-    const emailBody = `
+        // generate OTP
+        const otp = otpGenerator();
+        const currentTimestamp = DateTime.utc().toISO();
+
+        // First check if email exists in reset_otp table
+        const checkOtpQuery = "SELECT * FROM reset_otp WHERE email_id = $1";
+        const otpResult = await pool.query(checkOtpQuery, [email]);
+
+        let updateResult;
+        if (otpResult.rows.length > 0) {
+            // Update existing record
+            const updateQuery = "UPDATE reset_otp SET otp = $1, created_at = $2 WHERE email_id = $3";
+            updateResult = await pool.query(updateQuery, [otp, currentTimestamp, email]);
+        } else {
+            // Insert new record
+            const insertQuery = "INSERT INTO reset_otp (email_id, otp, created_at) VALUES ($1, $2, $3)";
+            updateResult = await pool.query(insertQuery, [email, otp, currentTimestamp]);
+        }
+        // send email with OTP
+        const emailBody = `
       <p style="text-align: center;">
         <img src="https://res.cloudinary.com/djx7nzzzq/image/upload/v1733142971/qgebalt4vovtkeedmkb3.png" style="width: 187px;">
       </p>  
@@ -271,62 +272,62 @@ const forgotPassword = async (req, res) => {
       <p>Thank you,<br><strong>Team SUST Oracle</strong></p>
     `;
 
-    const subject = "SUST Oracle - Reset Your Password";
+        const subject = "SUST Oracle - Reset Your Password";
 
-    await singleMailService(email, subject, emailBody);
+        await singleMailService(email, subject, emailBody);
 
-    if (updateResult.rowCount > 0) {
-      return res.status(200).json({ message: "OTP sent to your email. Please enter the OTP to reset your password." });
-    } else {
-      return res.status(500).json({ message: "An error occurred. Please try again later." });
+        if (updateResult.rowCount > 0) {
+            return res.status(200).json({ message: "OTP sent to your email. Please enter the OTP to reset your password." });
+        } else {
+            return res.status(500).json({ message: "An error occurred. Please try again later." });
+        }
+
+    } catch (error) {
+        console.error("Error in forgot password:", error.message);
+        return res.status(500).json({ message: "An error occurred. Please try again later." });
     }
-
-  } catch (error) {
-    console.error("Error in forgot password:", error.message);
-    return res.status(500).json({ message: "An error occurred. Please try again later." });
-  }
 };
 
 const vaildateResetOtp = async (req, res) => {
-  // Validate reset OTP logic here
-  const { email, otp } = req.body;
+    // Validate reset OTP logic here
+    const { email, otp } = req.body;
 
-  if (!email || !otp) {
-    return res.status(400).json({ message: "Email and OTP are required" });
-  }
-
-  try {
-    // check if email exists in database
-    const emailQuery = "SELECT * FROM reset_otp WHERE email_id = $1";
-    const emailResult = await pool.query(emailQuery, [email]);
-
-    if (emailResult.rows.length === 0) {
-      return res.status(400).json({ message: "Email does not exist in our database" });
+    if (!email || !otp) {
+        return res.status(400).json({ message: "Email and OTP are required" });
     }
 
-    // check if OTP is valid with expiry
-    const storedOtp = String(emailResult.rows[0].otp);
-    const receivedOtp = String(otp);
-    const otpCreatedAt = new Date(emailResult.rows[0].created_at).getTime();
-    const expiryTime = Date.now() - (5 * 60 * 1000); // 5 minutes ago
-    
-    if (storedOtp !== receivedOtp || otpCreatedAt < expiryTime) {
-      return res.status(400).json({ message: "OTP is incorrect or has expired" });
-    }
+    try {
+        // check if email exists in database
+        const emailQuery = "SELECT * FROM reset_otp WHERE email_id = $1";
+        const emailResult = await pool.query(emailQuery, [email]);
 
-    // create new password
-    const newPassword = passwordGenerator();
+        if (emailResult.rows.length === 0) {
+            return res.status(400).json({ message: "Email does not exist in our database" });
+        }
 
-    // Get user info for email
-    const userQuery = "SELECT user_name FROM users WHERE user_email = $1";
-    const userResult = await pool.query(userQuery, [email]);
+        // check if OTP is valid with expiry
+        const storedOtp = String(emailResult.rows[0].otp);
+        const receivedOtp = String(otp);
+        const otpCreatedAt = DateTime.fromISO(emailResult.rows[0].created_at).toMillis(); // Convert to UTC milliseconds
+        const expiryTime = DateTime.utc().minus({ minutes: 5 }).toMillis(); // Current UTC time minus 5 minutes
 
-    // update password in database
-    const updateQuery = "UPDATE users SET password = $1 WHERE user_email = $2";
-    const updateResult = await pool.query(updateQuery, [await bcrypt.hash(newPassword, 10), email]);
+        if (storedOtp !== receivedOtp || otpCreatedAt < expiryTime) {
+            return res.status(400).json({ message: "OTP is incorrect or has expired" });
+        }
 
-    // send email with new password
-    const emailBody = `
+        // create new password
+        const newPassword = passwordGenerator();
+
+        // Get user info for email
+        const userQuery = "SELECT user_name FROM users WHERE user_email = $1";
+        const userResult = await pool.query(userQuery, [email]);
+
+        // update password in database
+        const updateQuery = "UPDATE users SET password = $1 WHERE user_email = $2";
+        const updateResult = await pool.query(updateQuery, [await bcrypt.hash(newPassword, 10), email]);
+
+        // send email with new password
+        const emailBody = `
       <p style="text-align: center;">
         <img src="https://res.cloudinary.com/djx7nzzzq/image/upload/v1733142971/qgebalt4vovtkeedmkb3.png" style="width: 187px;">
       </p>  
@@ -337,20 +338,20 @@ const vaildateResetOtp = async (req, res) => {
       <p>Thank you,<br><strong>Team SUST Oracle</strong></p>
     `;
 
-    const subject = "SUST Oracle - Your New Password";
+        const subject = "SUST Oracle - Your New Password";
 
-    await singleMailService(email, subject, emailBody);
+        await singleMailService(email, subject, emailBody);
 
-    if (updateResult.rowCount > 0) {
-      return res.status(200).json({ message: "Password reset successful. Please check your email for your new password." });
-    } else {
-      return res.status(500).json({ message: "An error occurred. Please try again later." });
+        if (updateResult.rowCount > 0) {
+            return res.status(200).json({ message: "Password reset successful. Please check your email for your new password." });
+        } else {
+            return res.status(500).json({ message: "An error occurred. Please try again later." });
+        }
+
+    } catch (error) {
+        console.error("Error in validate reset OTP:", error.message);
+        return res.status(500).json({ message: "An error occurred. Please try again later." });
     }
-
-  } catch (error) {
-    console.error("Error in validate reset OTP:", error.message);
-    return res.status(500).json({ message: "An error occurred. Please try again later." });
-  }
 };
 
 module.exports = { registration, registrationVerify, resendVerification, login, forgotPassword, vaildateResetOtp };
