@@ -196,60 +196,68 @@ const deleteSession = async (req, res) => {
     }
 };
 
-const getCustomSessionById = async (req, res) => {
-    const { session_id } = req.params;
-    const { uid } = req.user;
+// get custom session by id
+const getCustomSessionsByUser = async (req, res) => {
+    const { user_id } = req.params; // The user to fetch sessions for
+    const { uid } = req.user; // The authenticated user's ID
 
     try {
-        // Fetch session details
-        const sessionQuery = `
+        // Fetch all sessions where the user is either host or guest
+        const sessionsQuery = `
             SELECT * FROM sessions 
-            WHERE id = $1 
-              AND (host_id = $2 OR guest_id = $2) 
-              AND end_time > NOW()
+            WHERE host_id = $1 OR guest_id = $1
+            ORDER BY start_time ASC
         `;
-        const sessionResult = await pool.query(sessionQuery, [session_id, uid]);
+        const sessionsResult = await pool.query(sessionsQuery, [user_id]);
 
-        if (sessionResult.rows.length === 0) {
-            return res.status(404).json({ message: "Session not found" });
+        if (sessionsResult.rows.length === 0) {
+            return res.status(404).json({ message: "No sessions found for the user" });
         }
 
-        const session = sessionResult.rows[0];
-        const { host_id, guest_id, meeting_host_url, meeting_url } = session;
+        // Iterate through the sessions and construct the response
+        const sessions = await Promise.all(
+            sessionsResult.rows.map(async (session) => {
+                const { id, host_id, guest_id, meeting_host_url, meeting_url } = session;
 
-        // Fetch guest user details (excluding host)
-        const usersQuery = `
-            SELECT uid AS id, user_name AS username 
-            FROM users 
-            WHERE uid = $1
-        `;
-        const usersResult = await pool.query(usersQuery, [guest_id]);
+                // Fetch guest user details (excluding host)
+                const usersQuery = `
+                    SELECT uid AS id, user_name AS username 
+                    FROM users 
+                    WHERE uid = $1
+                `;
+                const usersResult = await pool.query(usersQuery, [guest_id]);
 
-        // Prepare the `user` array with only guest details
-        const userArray = usersResult.rows.map((user) => ({
-            id: user.id,
-            username: user.username,
-        }));
+                // Prepare the `user` array with only guest details
+                const userArray = usersResult.rows.map((user) => ({
+                    id: user.id,
+                    username: user.username,
+                }));
 
-        // Prepare the response object
-        const response = {
-            id: session.id,
-            host_id: session.host_id,
-            schedule_id: session.schedule_id,
-            stime: session.start_time,
-            etime: session.end_time,
-            title: session.title,
-            meeting_url: session.host_id === uid ? meeting_host_url : meeting_url,
-            status: session.status,
-            user: userArray, // Contains only guest details
-        };
+                // Determine if the current user is authorized to view the meeting URL
+                const isAuthorized =
+                    uid === host_id || userArray.some((user) => user.id === uid);
 
-        res.status(200).json(response);
+                // Construct the formatted session object
+                return {
+                    id: session.id,
+                    host_id: session.host_id,
+                    schedule_id: session.schedule_id,
+                    stime: session.start_time,
+                    etime: session.end_time,
+                    title: session.title,
+                    meeting_url: isAuthorized ? (uid === host_id ? meeting_host_url : meeting_url) : null,
+                    status: session.status,
+                    user: userArray, // Contains only guest details
+                };
+            })
+        );
+
+        res.status(200).json(sessions);
     } catch (error) {
-        console.error("Error fetching custom session data:", error);
+        console.error("Error fetching custom sessions data:", error);
         res.status(500).json({ message: "Internal server error" });
     }
 };
 
 
-module.exports = { getSessionsByUser, getSessionById, createSession, approveSession, deleteSession, getCustomSessionById };
+module.exports = { getSessionsByUser, getSessionById, createSession, approveSession, deleteSession, getCustomSessionsByUser };

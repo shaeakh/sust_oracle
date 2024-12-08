@@ -213,10 +213,24 @@ const deleteSchedule = async (req, res) => {
     }
 };
 
+// get schedule by user id
+const getScheduleByUserId = async (req, res) => {
+    const { uid } = req.params;
+    try {
+        const query = "SELECT * FROM schedules WHERE user_id = $1";
+        const result = await pool.query(query, [uid]);
+        res.json(result.rows);
+    } catch (error) {
+        console.error(error);
+        res.status(500).json({ message: "Internal server error" });
+    }
+};
+
 module.exports = {
     createSchedule,
     getAllSchedules,
     getScheduleById,
     updateSchedule,
     deleteSchedule,
+    getScheduleByUserId,
 };
