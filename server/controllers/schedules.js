@@ -1,15 +1,20 @@
 const { pool } = require("../db/dbconnect");
+const { DateTime } = require("luxon");
 
 const populateTimeSlots = async (schedule_id, start_time, end_time, min_duration) => {
     const slots = [];
-    let slot_start = new Date(start_time);
-    let slot_end = new Date(slot_start.getTime() + min_duration * 60000);
+    let slot_start = DateTime.fromISO(start_time, { zone: "utc" });
+const slot_end = DateTime.fromISO(end_time, { zone: "utc" });
 
-    while (slot_end <= new Date(end_time)) {
-        slots.push([schedule_id, slot_start.toISOString(), slot_end.toISOString()]);
-        slot_start = new Date(slot_end);
-        slot_end = new Date(slot_start.getTime() + min_duration * 60000);
-    }
+while (slot_start.plus({ minutes: min_duration }) <= slot_end) {
+    const slot_end_time = slot_start.plus({ minutes: min_duration });
+    slots.push([
+        schedule_id,
+        slot_start.toISO(),
+        slot_end_time.toISO(),
+    ]);
+    slot_start = slot_end_time;
+}
 
     if (slots.length > 0) {
         const query = `
@@ -33,7 +38,7 @@ const createSchedule = async (req, res) => {
         return res.status(400).json({ message: "Invalid duration values" });
     }
     
-    if (new Date(end_time) - new Date(start_time) < min_duration * 60000) {
+    if (DateTime.fromISO(end_time, { zone: "utc" }) - DateTime.fromISO(start_time, { zone: "utc" }) < min_duration * 60000) {
         return res.status(400).json({ message: "Schedule duration is too short to accommodate minimum duration slots." });
     }    
 
@@ -44,7 +49,11 @@ const createSchedule = async (req, res) => {
             WHERE user_id = $1 
               AND NOT ($2 >= end_time OR $3 <= start_time)
         `;
-        const overlapValues = [uid, start_time, end_time];
+        const overlapValues = [
+            uid,
+            DateTime.fromISO(start_time, { zone: "utc" }).toISO(),
+            DateTime.fromISO(end_time, { zone: "utc" }).toISO(),
+        ];        
         const overlapResult = await pool.query(overlapQuery, overlapValues);
 
         if (overlapResult.rows.length > 0) {
@@ -57,7 +66,14 @@ const createSchedule = async (req, res) => {
             VALUES ($1, $2, $3, $4, $5, $6) 
             RETURNING *
         `;
-        const values = [uid, start_time, end_time, min_duration, max_duration, auto_approve];
+        const values = [
+            uid,
+            DateTime.fromISO(start_time, { zone: "utc" }).toISO(),
+            DateTime.fromISO(end_time, { zone: "utc" }).toISO(),
+            min_duration,
+            max_duration,
+            auto_approve,
+        ];        
         const result = await pool.query(query, values);
 
         // Populate time slots in the schedule_availability table
@@ -151,7 +167,12 @@ const updateSchedule = async (req, res) => {
               AND id != $2 
               AND NOT ($3 >= end_time OR $4 <= start_time)
         `;
-        const overlapValues = [uid, schedule_id, start_time, end_time];
+        const overlapValues = [
+            uid,
+            schedule_id,
+            DateTime.fromISO(start_time, { zone: "utc" }).toISO(),
+            DateTime.fromISO(end_time, { zone: "utc" }).toISO(),
+        ];        
         const overlapResult = await pool.query(overlapQuery, overlapValues);
 
         if (overlapResult.rows.length > 0) {
@@ -165,7 +186,16 @@ const updateSchedule = async (req, res) => {
             WHERE id = $6 AND user_id = $7 
             RETURNING *
         `;
-        const values = [start_time, end_time, min_duration, max_duration, auto_approve, schedule_id, uid];
+        const values = [
+            DateTime.fromISO(start_time, { zone: "utc" }).toISO(),
+            DateTime.fromISO(end_time, { zone: "utc" }).toISO(),
+            min_duration,
+            max_duration,
+            auto_approve,
+            schedule_id,
+            uid,
+        ];
+        
         const result = await pool.query(query, values);
 
         // Clear existing time slots
