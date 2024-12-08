@@ -1,10 +1,8 @@
 import { MeetingList } from "@/components/dashboard/meeting-list";
 import { TimeSlotDialog } from "@/components/dashboard/time-slot-dialog";
-import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Meeting } from "@/lib/types/meeting";
 import { Calendar } from "lucide-react";
-import Link from "next/link";
 const meetings: Meeting[] = [
   {
     id: 1,
@@ -74,15 +72,6 @@ export default function Home() {
                   <div className="text-2xl font-bold">2</div>
                 </CardContent>
               </Card>
-
-              <Link href={"/community"}>
-                <Button
-                  size="lg"
-                  className="bg-primary text-primary-foreground hover:bg-primary/90"
-                >
-                  Join to community
-                </Button>
-              </Link>
             </div>
           </main>
           <div className="container mx-auto py-8">
