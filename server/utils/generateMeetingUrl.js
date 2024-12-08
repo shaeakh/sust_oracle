@@ -1,5 +1,6 @@
 const axios = require("axios");
 const { getZoomToken } = require("./getZoomToken");
+const { DateTime } = require("luxon");
 
 const generateMeetingUrl = async (meetingData) => {
     try {
@@ -7,7 +8,7 @@ const generateMeetingUrl = async (meetingData) => {
         const payload = {
             topic: meetingData.title,
             type: 2,
-            start_time: new Date(meetingData.stime),
+            start_time: DateTime.fromISO(meetingData.stime).toUTC().toFormat('yyyy-MM-dd\'T\'HH:mm:ss\'Z\''),
             duration: 30,
             // calculate timezone offset
             timezone: Intl.DateTimeFormat().resolvedOptions().timeZone,
