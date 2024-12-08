@@ -17,7 +17,6 @@ import {
   navigationMenuTriggerStyle,
 } from "@/components/ui/navigation-menu";
 import axios from "axios";
-import { Activity } from "lucide-react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import * as React from "react";
@@ -92,15 +91,13 @@ export function Navbar() {
       <div className="container flex h-16 items-center justify-between">
         {/* Logo Section */}
         <div className="flex items-center space-x-2">
-          <Activity className="h-6 w-6" />
-          <Link href="/" className="-m-1.5 p-1.5 flex items-center space-x-2">
-            <span className="text-xl text-blue-500 font-thin font-mono">
-              Project
-            </span>
-            <span className="text-xl font-extrabold text-blue-800 font-mono">
-              Name
-            </span>
-          </Link>
+          <a href="/">
+            <img
+              src="https://raw.githubusercontent.com/shaeakh/code-share/refs/heads/main/sust_oracle/logo.png"
+              alt="ADDUTOR"
+              className="w-56"
+            />
+          </a>
         </div>
 
         {/* Navigation Links */}

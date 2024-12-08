@@ -2,7 +2,6 @@
 import { Features } from "@/components/landingpage/sections/features";
 import { Testimonials } from "@/components/landingpage/sections/testimonials";
 import { Button } from "@/components/ui/button";
-import { Activity } from "lucide-react";
 import Link from "next/link";
 
 export default function Home() {
@@ -12,13 +11,15 @@ export default function Home() {
       <header className="relative bg-background pt-16">
         <div className="container mx-auto px-6 py-16 text-center md:py-24">
           <h1 className="mb-6 text-4xl font-extrabold tracking-tight sm:text-5xl md:text-6xl">
-            Transform Your Fitness Journey
-            <span className="text-primary"> Today</span>
+            <span className="text-primary">Effortless </span>
+            Scheduling for <span className="text-primary"> Effective</span>{" "}
+            Learning
           </h1>
           <p className="mx-auto mb-8 max-w-2xl text-lg text-muted-foreground sm:text-xl">
-            Track your progress, achieve your goals, and stay motivated with our
-            AI-powered fitness platform. Join thousands of users who have
-            already transformed their lives.
+            Bridging Teachers and Students Seamlessly
+          </p>
+          <p className="mx-auto mb-8 max-w-2xl text-lg text-muted-foreground sm:text-xl">
+            Connect. Schedule. Learn.
           </p>
           <div className="flex justify-center space-x-4">
             <Button size="lg" asChild>
@@ -54,10 +55,11 @@ export default function Home() {
       <footer className="mt-auto border-t py-8">
         <div className="container mx-auto px-6">
           <div className="flex flex-col items-center justify-between space-y-4 md:flex-row md:space-y-0">
-            <div className="flex items-center space-x-2">
-              <Activity className="h-6 w-6" />
-              <span className="text-xl font-bold">Project Name</span>
-            </div>
+            <img
+              src="https://raw.githubusercontent.com/shaeakh/code-share/refs/heads/main/sust_oracle/logo.png"
+              alt="ADDUTOR"
+              className="w-56"
+            />
             <div className="flex space-x-6">
               <Link
                 href="#"
