@@ -50,7 +50,7 @@ function Page() {
   const fetchRequests = async () => {
     try {
       const response = await axios.get(
-        `${process.env.NEXT_PUBLIC_IP_ADD}/schedules/requests`,
+        `${process.env.NEXT_PUBLIC_IP_ADD}/session`,
         {
           headers: {
             Authorization: `Bearer ${localStorage.getItem("token")}`,
@@ -58,6 +58,7 @@ function Page() {
         }
       );
       setRequests(response.data);
+      setLoading(false);
     } catch (error) {
       toast({
         title: "Error",
@@ -76,20 +77,23 @@ function Page() {
   const handleAccept = async (id: number) => {
     setProcessingId(id);
     try {
-      await axios.post(
-        `${process.env.NEXT_PUBLIC_IP_ADD}/schedules/accept/${id}`,
-        {},
-        {
-          headers: {
-            Authorization: `Bearer ${localStorage.getItem("token")}`,
-          },
-        }
-      );
+      await axios
+        .post(
+          `${process.env.NEXT_PUBLIC_IP_ADD}/session/approve/${id}`,
+          {},
+          {
+            headers: {
+              Authorization: `Bearer ${localStorage.getItem("token")}`,
+            },
+          }
+        )
+        .then(() => {
+          fetchRequests();
+        });
       toast({
         title: "Success",
         description: "Request accepted successfully",
       });
-      fetchRequests();
     } catch (error) {
       toast({
         title: "Error",
@@ -104,19 +108,19 @@ function Page() {
   const handleDelete = async (id: number) => {
     setProcessingId(id);
     try {
-      await axios.delete(
-        `${process.env.NEXT_PUBLIC_IP_ADD}/schedules/reject/${id}`,
-        {
+      await axios
+        .delete(`${process.env.NEXT_PUBLIC_IP_ADD}/session/${id}`, {
           headers: {
             Authorization: `Bearer ${localStorage.getItem("token")}`,
           },
-        }
-      );
+        })
+        .then(() => {
+          fetchRequests();
+        });
       toast({
         title: "Success",
         description: "Request rejected successfully",
       });
-      fetchRequests();
     } catch (error) {
       toast({
         title: "Error",
@@ -199,14 +203,14 @@ function Page() {
               <CardFooter className="flex justify-end space-x-2">
                 <Button
                   size="sm"
-                  className="bg-gradient-to-r from-green-500 to-emerald-600 hover:from-green-600 hover:to-emerald-700 text-white transition-all duration-300 transform hover:scale-105 hover:shadow-md flex items-center gap-2 group"
+                  className="bg-gradient-to-r from-green-700 to-emerald-800 hover:from-green-800 hover:to-emerald-900 text-white transition-all duration-300 transform hover:scale-105 hover:shadow-md flex items-center gap-2 group"
                   onClick={() => handleAccept(request.id)}
                   disabled={processingId === request.id || request.status}
                 >
                   {processingId === request.id ? (
                     <Loader2 className="h-4 w-4 animate-spin" />
                   ) : (
-                    <CheckCircle2 className="h-4 w-4 transition-transform group-hover:rotate-12" />
+                    <CheckCircle2 className="h-4 w-4 transition-transform group-hover:-rotate-12" />
                   )}
                   <span className="group-hover:translate-x-0.5 transition-transform">
                     Accept

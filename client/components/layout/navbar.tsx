@@ -190,6 +190,14 @@ export function Navbar() {
                         Profile
                       </DropdownMenuRadioItem>
                     </Link>
+                    <Link href="/dashboard">
+                      <DropdownMenuRadioItem
+                        className=" active:text-white focus:text-white"
+                        value="Dashboard"
+                      >
+                        Dashboard
+                      </DropdownMenuRadioItem>
+                    </Link>
                     <Link href="/community">
                       <DropdownMenuRadioItem
                         className=" active:text-white focus:text-white"
@@ -206,23 +214,7 @@ export function Navbar() {
                         Admin Panel
                       </DropdownMenuRadioItem>
                     </Link>
-                    <Link href="/settings">
-                      <DropdownMenuRadioItem
-                        className=" active:text-white focus:text-white"
-                        value="Settings"
-                      >
-                        Settings
-                      </DropdownMenuRadioItem>
-                    </Link>
 
-                    <Link href="/dashboard">
-                      <DropdownMenuRadioItem
-                        className=" active:text-white focus:text-white"
-                        value="Dashboard"
-                      >
-                        Dashboard
-                      </DropdownMenuRadioItem>
-                    </Link>
                     <DropdownMenuRadioItem
                       className=" active:text-white focus:text-white"
                       onClick={handle_logout}

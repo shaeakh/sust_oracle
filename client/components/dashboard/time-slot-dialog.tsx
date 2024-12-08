@@ -31,11 +31,13 @@ import {
 import { useToast } from "@/components/ui/use-toast";
 import { cn } from "@/lib/utils";
 import {
+  BarChart2,
   CalendarIcon,
   Clock,
   Loader2,
   MessageSquareMore,
   Pencil,
+  Sparkles,
   Timer,
   Trash2,
   Users,
@@ -346,12 +348,25 @@ export function TimeSlotDialog() {
               >
                 <MessageSquareMore className="h-5 w-5 transition-transform group-hover:rotate-12" />
                 Requests
-                <Badge 
+                <Badge
                   className="bg-white text-rose-600 group-hover:bg-rose-100 transition-colors ml-1"
                   variant="outline"
                 >
                   3
                 </Badge>
+              </Button>
+            </Link>
+            <Link href={"/analytics"}>
+              <Button
+                size="lg"
+                className="bg-gradient-to-r from-indigo-500 via-purple-500 to-pink-500 hover:from-indigo-600 hover:via-purple-600 hover:to-pink-600 text-white transition-all duration-300 transform hover:scale-105 hover:shadow-lg flex items-center gap-2 group relative overflow-hidden"
+              >
+                <div className="absolute inset-0 bg-gradient-to-r from-indigo-400/20 via-purple-400/20 to-pink-400/20 animate-gradient-xy"></div>
+                <BarChart2 className="h-5 w-5 transition-transform group-hover:rotate-6 group-hover:scale-110" />
+                <span className="relative group-hover:translate-x-0.5 transition-transform">
+                  Analytics
+                </span>
+                <Sparkles className="h-4 w-4 absolute top-1 right-1 text-white/40 animate-pulse group-hover:text-white/60" />
               </Button>
             </Link>
           </div>
