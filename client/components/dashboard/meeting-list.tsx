@@ -2,8 +2,6 @@
 
 import { Meeting } from "@/lib/types/meeting";
 import { differenceInMinutes, startOfDay } from "date-fns";
-import { useState } from "react";
-import { MeetingDialog } from "./meeting-dialog";
 import { TimeLabels } from "./time-labels";
 
 interface MeetingListProps {
@@ -11,14 +9,6 @@ interface MeetingListProps {
 }
 
 export function MeetingList({ meetings }: MeetingListProps) {
-  const [selectedMeeting, setSelectedMeeting] = useState<Meeting | null>(null);
-  const [dialogOpen, setDialogOpen] = useState(false);
-
-  const handleMeetingClick = (meeting: Meeting) => {
-    setSelectedMeeting(meeting);
-    setDialogOpen(true);
-  };
-
   // Group meetings by column (assuming no overlapping meetings)
   const columns = meetings.reduce((acc, meeting) => {
     const startTime = new Date(meeting.stime);
@@ -56,7 +46,7 @@ export function MeetingList({ meetings }: MeetingListProps) {
 
   return (
     <div className="relative min-h-[600px] pl-16">
-      <TimeLabels startHour={0} endHour={24} />
+      <TimeLabels meetings={meetings} />
       <div className="grid h-full grid-cols-[repeat(auto-fill,minmax(250px,1fr))] gap-4">
         {columns.map((column, colIndex) => (
           <div key={colIndex} className="relative h-full">
@@ -80,19 +70,12 @@ export function MeetingList({ meetings }: MeetingListProps) {
                     top: `${top}%`,
                     height: `${height}%`,
                   }}
-                >
-                  {/* <MeetingCard meeting={meeting} onClick={handleMeetingClick} /> */}
-                </div>
+                ></div>
               );
             })}
           </div>
         ))}
       </div>
-      <MeetingDialog
-        meeting={selectedMeeting}
-        open={dialogOpen}
-        onOpenChange={setDialogOpen}
-      />
     </div>
   );
 }
