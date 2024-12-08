@@ -1,10 +1,8 @@
 import { MeetingList } from "@/components/dashboard/meeting-list";
-import { TimeSlotDialog } from "@/components/dashboard/time-slot-dialog";
-import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Meeting } from "@/lib/types/meeting";
 import { Calendar } from "lucide-react";
-import Link from "next/link";
+
 const meetings: Meeting[] = [
   {
     id: 1,
@@ -46,16 +44,30 @@ const meetings: Meeting[] = [
     location: "Meeting Room B",
   },
 ];
-export default function Home() {
+
+function page({ params }: { params: { id: number } }) {
   return (
     <>
       <div className="min-h-screen bg-cover bg-center bg-no-repeat bg-fit p-8">
+        <div className="w-full flex justify-center">
+          <div className="w-2/3 flex items-center space-x-5">
+            <img
+              className="w-40 rounded-full fit-cover"
+              src="https://cdn.pixabay.com/photo/2015/10/05/22/37/blank-profile-picture-973460_1280.png"
+              alt=""
+            />
+            <div>
+              <p className="text-4xl font-bold">name</p>
+              <p className="text-2xl">bio</p>
+            </div>
+          </div>
+        </div>
+
         <div className="flex min-h-screen flex-col">
           <header className="border-b">
             <div className="container mx-auto px-4 py-4">
               <div className="flex items-center justify-between">
                 <h1 className="text-2xl font-bold">Meeting Scheduler</h1>
-                <TimeSlotDialog />
               </div>
             </div>
           </header>
@@ -74,15 +86,6 @@ export default function Home() {
                   <div className="text-2xl font-bold">2</div>
                 </CardContent>
               </Card>
-
-              <Link href={"/community"}>
-                <Button
-                  size="lg"
-                  className="bg-primary text-primary-foreground hover:bg-primary/90"
-                >
-                  Join to community
-                </Button>
-              </Link>
             </div>
           </main>
           <div className="container mx-auto py-8">
@@ -94,3 +97,5 @@ export default function Home() {
     </>
   );
 }
+
+export default page;

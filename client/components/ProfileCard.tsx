@@ -4,6 +4,7 @@ import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
+import { uploadAssetsToCloud } from "@/utils/ImageUploadService";
 import axios from "axios";
 import { motion } from "framer-motion";
 import { Edit, Mail, Save, User } from "lucide-react";
@@ -37,7 +38,8 @@ export default function ProfileCard() {
   const [isChanged, setIsChanged] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
   const token = localStorage.getItem("token");
-
+  const [dp, setDp] = useState(false);
+  const [dp_file, setDp_file] = useState<File | null>(null);
   const fetch_data = async () => {
     axios
       .get(`${process.env.NEXT_PUBLIC_IP_ADD}/user/profile`, {
@@ -48,6 +50,7 @@ export default function ProfileCard() {
       .then((res) => {
         setInitialData(res.data);
         setData(res.data);
+        console.log(res.data);
       });
   };
 
@@ -60,6 +63,14 @@ export default function ProfileCard() {
     setEditingField(field);
   };
 
+  const handle_file_change = (e: React.ChangeEvent<HTMLInputElement>) => {
+    if (e.target.files && e.target.files[0]) {
+      const file = e.target.files[0];
+      setDp_file(file);
+      setIsChanged(true);
+    }
+  };
+
   const handleSave = (field: string, value: string | number) => {
     setData((prevData) => ({ ...prevData, [field]: value }));
     setEditingField(null);
@@ -67,12 +78,18 @@ export default function ProfileCard() {
   };
 
   const handleSaveAll = async () => {
+    var dp_url = null;
+    if (dp) {
+      dp_url = await uploadAssetsToCloud(dp_file!);
+    }
+
     if (isLoading) return;
     const temp = {
       user_name: data.user_name,
       user_email: data.user_email,
       bio: data.bio,
       location: data.location,
+      user_image: dp_url || data.user_image,
     };
 
     setIsLoading(true);
@@ -144,6 +161,25 @@ export default function ProfileCard() {
                 handleSave={handleSave}
                 icon={<Mail className="w-4 h-4" />}
               />
+              {dp ? (
+                <Button disabled={isLoading}>
+                  <input
+                    type="file"
+                    onChange={handle_file_change}
+                    accept="image/*"
+                    className="absolute inset-0 w-full h-full opacity-0 cursor-pointer"
+                  />
+                  {isLoading ? "Uploading..." : "Choose File"}
+                </Button>
+              ) : (
+                <Button
+                  onClick={() => {
+                    setDp(true);
+                  }}
+                >
+                  Upload profile picture
+                </Button>
+              )}
             </div>
           </div>
 
