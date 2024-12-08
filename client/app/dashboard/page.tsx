@@ -37,7 +37,7 @@ const meetings: Meeting[] = [
     title: "Client Presentation",
     url: "https://zoom.us/j/456789123",
     stime: new Date("2024-12-09T10:00:00.000Z"),
-    etime: new Date("2024-12-09T11:00:00.000Z"),
+    etime: new Date("2024-12-09T13:00:00.000Z"),
     user: [
       { id: 1, username: "Nixon Deb Antu" },
       { id: 2, username: "John Doe" },
@@ -46,7 +46,6 @@ const meetings: Meeting[] = [
     location: "Meeting Room B",
   },
 ];
-
 export default function Home() {
   return (
     <>

@@ -4,7 +4,7 @@ import { Meeting } from "@/lib/types/meeting";
 import { cn } from "@/lib/utils";
 import { format } from "date-fns";
 import { toZonedTime } from "date-fns-tz";
-import { useState } from "react";
+import { useMemo, useState } from "react";
 import { MeetingCard } from "./meeting-card";
 import { MeetingDialog } from "./meeting-dialog";
 
@@ -20,9 +20,10 @@ export function TimeLabels({ meetings }: TimeLabelsProps) {
   const [endHour, setEndHour] = useState<number>(18); // Default to 6 PM
 
   // Generate an array of hours between startHour and endHour
-  const hours = Array.from(
-    { length: endHour - startHour + 1 },
-    (_, i) => startHour + i
+  const hours = useMemo(
+    () =>
+      Array.from({ length: endHour - startHour + 1 }, (_, i) => startHour + i),
+    [startHour, endHour]
   );
 
   const [selectedMeeting, setSelectedMeeting] = useState<Meeting | null>(null);
@@ -38,20 +39,51 @@ export function TimeLabels({ meetings }: TimeLabelsProps) {
     setDialogOpen(true);
   };
 
-  // Optional: Ensure that endHour is always greater than or equal to startHour
+  // Ensure that endHour is always greater than or equal to startHour
   const handleStartHourChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const value = parseInt(e.target.value, 10);
-    if (!isNaN(value) && value <= endHour) {
+    if (!isNaN(value) && value <= endHour && value >= 0 && value <= 23) {
       setStartHour(value);
     }
   };
 
   const handleEndHourChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const value = parseInt(e.target.value, 10);
-    if (!isNaN(value) && value >= startHour) {
+    if (!isNaN(value) && value >= startHour && value >= 0 && value <= 23) {
       setEndHour(value);
     }
   };
+
+  /**
+   * Determine which hours should be hidden because they are fully covered by a meeting.
+   * An hour is fully covered if any meeting starts before the hour and ends after the hour.
+   */
+  const hiddenHours = useMemo(() => {
+    const hidden = new Set<number>();
+
+    meetings.forEach((meeting) => {
+      const start = convertToBST(new Date(meeting.stime));
+      const end = convertToBST(new Date(meeting.etime));
+
+      // Iterate through each hour to check if it's fully covered by this meeting
+      for (let hour = start.getHours(); hour < end.getHours(); hour++) {
+        // Only consider hours within the startHour and endHour range
+        if (hour >= startHour && hour <= endHour) {
+          // Check if the meeting covers the entire hour
+          const hourStart = new Date(start);
+          hourStart.setHours(hour, 0, 0, 0);
+          const hourEnd = new Date(start);
+          hourEnd.setHours(hour + 1, 0, 0, 0);
+
+          if (start < hourStart && end >= hourEnd) {
+            hidden.add(hour);
+          }
+        }
+      }
+    });
+
+    return hidden;
+  }, [meetings, startHour, endHour, convertToBST]);
 
   return (
     <div className="flex flex-col h-full p-4">
@@ -95,33 +127,47 @@ export function TimeLabels({ meetings }: TimeLabelsProps) {
 
       {/* Time Labels and Meetings */}
       <div className="flex flex-col flex-1 overflow-y-auto">
-        {hours.map((hour) => (
-          <div
-            key={hour}
-            className={cn(
-              "flex items-center h-16 border-t border-gray-200",
-              hour === endHour && "border-b"
-            )}
-          >
-            <span className="w-20 text-sm text-gray-500">
-              {format(new Date().setHours(hour, 0, 0, 0), "h:mm a")}
-            </span>
-            <div className="flex-1 flex flex-wrap gap-2">
-              {meetings
-                .filter((meeting) => {
-                  const bstStartTime = convertToBST(new Date(meeting.stime));
-                  return bstStartTime.getHours() === hour;
-                })
-                .map((meeting) => (
+        {hours.map((hour) => {
+          // Skip rendering this hour if it's fully covered by any meeting
+          if (hiddenHours.has(hour)) {
+            return null;
+          }
+
+          // Convert current hour to a Date object for display
+          const currentHourDate = convertToBST(new Date());
+          currentHourDate.setHours(hour, 0, 0, 0);
+          const formattedTime = format(currentHourDate, "h:mm a");
+
+          // Filter meetings that start at this hour
+          const startingMeetings = meetings.filter((meeting) => {
+            const bstStartTime = convertToBST(new Date(meeting.stime));
+            return bstStartTime.getHours() === hour;
+          });
+
+          return (
+            <div
+              key={hour}
+              className={cn(
+                "flex items-center h-16 border-t border-gray-200",
+                hour === endHour && "border-b"
+              )}
+            >
+              <span className="w-20 text-sm text-gray-500 relative">
+                {formattedTime}
+                {/* Optionally, you can add indicators like the red blocks here */}
+              </span>
+              <div className="flex-1 flex flex-wrap gap-2">
+                {startingMeetings.map((meeting) => (
                   <MeetingCard
                     key={meeting.id}
                     meeting={meeting}
                     onClick={handleMeetingClick}
                   />
                 ))}
+              </div>
             </div>
-          </div>
-        ))}
+          );
+        })}
       </div>
 
       {/* Meeting Dialog */}
