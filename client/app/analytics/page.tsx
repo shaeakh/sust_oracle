@@ -1,4 +1,4 @@
-import { Barchart } from "@/components/analytics/BarChart";
+import { Barchart } from "@/components/analytics/Barchart";
 import { Linechart } from "@/components/analytics/Linechart";
 import { Pie_Chart } from "@/components/analytics/Pie_Chart";
 import {
