@@ -38,5 +38,15 @@ const updateUser = async (req, res) => {
     }
 };
 
+const getAllUsers = async (req, res) => {
+    try {
+        const query = "SELECT uid, user_name, user_email, bio, location, isverified FROM users";
+        const result = await pool.query(query);
+        res.json(result.rows);
+    } catch (error) {
+        console.error(error);
+        res.status(500).json({ message: "Internal server error" });
+    }
+};
 
-module.exports = { getUser, updateUser };
+module.exports = { getUser, updateUser, getAllUsers };
