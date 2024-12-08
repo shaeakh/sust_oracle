@@ -40,8 +40,7 @@ export const RegisterForm: React.FC<RegisterFormProps> = ({
             : null,
       }
     );
-
-  const [error, setError] = useState<string | null>(null);
+  const [role, setrole] = useState("student");
   const [loading, setLoading] = useState(false);
 
   const handleSubmit = (e: React.FormEvent) => {
@@ -61,13 +60,11 @@ export const RegisterForm: React.FC<RegisterFormProps> = ({
             toast.success("Registration successful");
           } else {
             setLoading(false);
-            setError(res?.data?.message || "Registration failed");
             toast.error(res?.data?.message || "Registration failed");
           }
         })
         .catch((err) => {
           setLoading(false);
-          setError(err?.response?.data?.message || "Registration failed");
           toast.error(err?.response?.data?.message || "Registration failed");
         });
     }
@@ -108,6 +105,15 @@ export const RegisterForm: React.FC<RegisterFormProps> = ({
         onChange={handleChange}
         error={isSubmitted ? errors.confirmPassword : null}
       />
+      <div className="w-full px-5 flex justify-end">
+        <button
+          onClick={() => {
+            setrole("teacher");
+          }}
+        >
+          <p>Register as {role === "student" ? "Teacher" : "Student"}</p>
+        </button>
+      </div>
       <Button disabled={loading} type="submit" className="w-full">
         <UserPlus className="mr-2 h-4 w-4" /> Register
       </Button>
