@@ -5,8 +5,12 @@ export interface User {
 
 export interface Meeting {
   id: number;
+  host_id: number;
+  schedule_id: number;
   title: string;
-  time: string;
-  duration: string;
-  status: 'scheduled' | 'pending';
+  meeting_url: string | null;
+  stime: string;
+  etime: string;
+  status: boolean;
+  user: User[];
 }

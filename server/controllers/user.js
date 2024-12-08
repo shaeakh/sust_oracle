@@ -49,4 +49,22 @@ const getAllUsers = async (req, res) => {
     }
 };
 
-module.exports = { getUser, updateUser, getAllUsers };
+// get user by id
+const getUserById = async (req, res) => {
+    const {id} = req.params;
+    try {
+        // return user info without password
+        const query = "SELECT uid, user_name, user_email, bio, location, isverified, user_image FROM users WHERE uid = $1";
+        const result = await pool.query(query, [id]);
+        if (result.rows.length === 0) {
+            return res.status(404).json({ message: "User not found" });
+        }
+        const user = result.rows[0];
+        res.json(user);
+    } catch (error) {
+        console.error(error);
+        res.status(500).json({ message: "Internal server error" });
+    }
+};
+
+module.exports = { getUser, updateUser, getAllUsers, getUserById };

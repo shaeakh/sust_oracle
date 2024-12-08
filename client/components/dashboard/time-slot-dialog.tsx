@@ -31,14 +31,19 @@ import {
 import { useToast } from "@/components/ui/use-toast";
 import { cn } from "@/lib/utils";
 import {
+  BarChart2,
   CalendarIcon,
   Clock,
   Loader2,
+  MessageSquareMore,
   Pencil,
+  Sparkles,
   Timer,
   Trash2,
+  Users,
 } from "lucide-react";
 import moment from "moment-timezone";
+import Link from "next/link";
 import { useEffect, useState } from "react";
 
 interface TimeSlot {
@@ -319,12 +324,52 @@ export function TimeSlotDialog() {
     <div className="space-y-8">
       <Dialog open={open} onOpenChange={setOpen}>
         <DialogTrigger asChild>
-          <Button
-            size="lg"
-            className="bg-primary text-primary-foreground hover:bg-primary/90"
-          >
-            Create Time Slot
-          </Button>
+          <div className="flex justify-end gap-4">
+            <Button
+              size="lg"
+              className="bg-gradient-to-r from-indigo-500 to-purple-600 hover:from-indigo-600 hover:to-purple-700 text-white transition-all duration-300 transform hover:scale-105 hover:shadow-lg flex items-center gap-2"
+            >
+              <CalendarIcon className="h-5 w-5 animate-pulse" />
+              Create Time Slot
+            </Button>
+            <Link href={"/community"}>
+              <Button
+                size="lg"
+                className="bg-gradient-to-r from-emerald-500 to-teal-600 hover:from-emerald-600 hover:to-teal-700 text-white transition-all duration-300 transform hover:scale-105 hover:shadow-lg flex items-center gap-2"
+              >
+                <Users className="h-5 w-5 animate-bounce" />
+                Join Community
+              </Button>
+            </Link>
+            <Link href={"/handle_request"}>
+              <Button
+                size="lg"
+                className="bg-gradient-to-r from-rose-500 to-pink-600 hover:from-rose-600 hover:to-pink-700 text-white transition-all duration-300 transform hover:scale-105 hover:shadow-lg flex items-center gap-2 group"
+              >
+                <MessageSquareMore className="h-5 w-5 transition-transform group-hover:rotate-12" />
+                Requests
+                <Badge
+                  className="bg-white text-rose-600 group-hover:bg-rose-100 transition-colors ml-1"
+                  variant="outline"
+                >
+                  3
+                </Badge>
+              </Button>
+            </Link>
+            <Link href={"/analytics"}>
+              <Button
+                size="lg"
+                className="bg-gradient-to-r from-indigo-500 via-purple-500 to-pink-500 hover:from-indigo-600 hover:via-purple-600 hover:to-pink-600 text-white transition-all duration-300 transform hover:scale-105 hover:shadow-lg flex items-center gap-2 group relative overflow-hidden"
+              >
+                <div className="absolute inset-0 bg-gradient-to-r from-indigo-400/20 via-purple-400/20 to-pink-400/20 animate-gradient-xy"></div>
+                <BarChart2 className="h-5 w-5 transition-transform group-hover:rotate-6 group-hover:scale-110" />
+                <span className="relative group-hover:translate-x-0.5 transition-transform">
+                  Analytics
+                </span>
+                <Sparkles className="h-4 w-4 absolute top-1 right-1 text-white/40 animate-pulse group-hover:text-white/60" />
+              </Button>
+            </Link>
+          </div>
         </DialogTrigger>
         <DialogContent className="sm:max-w-[425px]">
           <DialogHeader>
@@ -456,8 +501,8 @@ export function TimeSlotDialog() {
                         </div>
                         <div className="flex justify-end space-x-2 pt-2">
                           <Button
-                            variant="outline"
                             size="sm"
+                            className="bg-gradient-to-r from-amber-400 to-orange-500 hover:from-amber-500 hover:to-orange-600 text-white transition-all duration-300 transform hover:scale-105 hover:shadow-md flex items-center gap-2 group"
                             onClick={() => {
                               setSelectedSlot(slot);
                               setDate(new Date(slot.start_time));
@@ -471,16 +516,23 @@ export function TimeSlotDialog() {
                               setIsUpdateDialogOpen(true);
                             }}
                           >
-                            <Pencil className="h-4 w-4 mr-1" />
-                            Update
+                            <Pencil className="h-4 w-4 transition-transform group-hover:rotate-12" />
+                            <span className="group-hover:translate-x-0.5 transition-transform">
+                              Update
+                            </span>
                           </Button>
                           <Button
-                            variant="destructive"
                             size="sm"
-                            onClick={() => confirmDelete(slot)}
+                            className="bg-gradient-to-r from-red-500 to-rose-600 hover:from-red-600 hover:to-rose-700 text-white transition-all duration-300 transform hover:scale-105 hover:shadow-md flex items-center gap-2 group"
+                            onClick={() => {
+                              setSlotToDelete(slot);
+                              setIsDeleteDialogOpen(true);
+                            }}
                           >
-                            <Trash2 className="h-4 w-4 mr-1" />
-                            Delete
+                            <Trash2 className="h-4 w-4 transition-transform group-hover:-rotate-12" />
+                            <span className="group-hover:translate-x-0.5 transition-transform">
+                              Delete
+                            </span>
                           </Button>
                         </div>
                       </div>
