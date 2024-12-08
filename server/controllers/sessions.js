@@ -199,6 +199,13 @@ const createSession = async (req, res) => {
         const insertValues = [host_id, guest_id, schedule_id, start_time, end_time, title, status];
         const insertResult = await pool.query(insertQuery, insertValues);
 
+        const updateTotalMeetingQuery = `
+            UPDATE users 
+            SET total_meeting = total_meeting + 1
+            WHERE uid = $1
+        `;
+        await pool.query(updateTotalMeetingQuery, [guest_id]);
+
         if (status) {
             await processApprovedSession(insertResult.rows[0]);
         }

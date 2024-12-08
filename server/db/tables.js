@@ -11,8 +11,9 @@ async function createTables() {
                 role VARCHAR(255) NOT NULL DEFAULT 'user',
                 isverified BOOLEAN NOT NULL DEFAULT FALSE,
                 bio VARCHAR(1000),
-                location VARCHAR(255),
+                location VARCHAR(255) DEFAULT 'Asia/Dhaka',
                 user_image VARCHAR(255),
+                total_meeting INT DEFAULT 0,
                 created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
             );
 
@@ -59,6 +60,18 @@ async function createTables() {
           CREATE TABLE IF NOT EXISTS zoom_tokens (
               token TEXT NOT NULL,
               created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+          );
+
+          CREATE TABLE IF NOT EXISTS notifications (
+              id SERIAL PRIMARY KEY,
+              user_id INTEGER NOT NULL REFERENCES users(uid),
+              type VARCHAR(50) NOT NULL,
+              title VARCHAR(255) NOT NULL,
+              message TEXT NOT NULL,
+              meeting_id VARCHAR(255),
+              read BOOLEAN DEFAULT false,
+              created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
+              FOREIGN KEY (user_id) REFERENCES users(uid) ON DELETE CASCADE
           );
 
             `);

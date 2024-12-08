@@ -102,4 +102,45 @@ const getSessionCountByDuration = async (req, res) => {
     }
 };
 
-module.exports = { getUserSessionHistory, getSessionCountByDuration };
+const getAcceptanceRate = async (req, res) => {
+    const { user_id } = req.params;
+
+    try {
+        // Query to get the user's total number of accepted sessions
+        const acceptedQuery = `
+            SELECT COUNT(*) AS accepted_count
+            FROM sessions
+            WHERE (host_id = $1 OR guest_id = $1) AND status = true
+        `;
+        const acceptedResult = await pool.query(acceptedQuery, [user_id]);
+
+        // Query to get the user's total number of meetings requested
+        const totalMeetingQuery = `
+            SELECT total_meeting
+            FROM users
+            WHERE uid = $1
+        `;
+        const totalMeetingResult = await pool.query(totalMeetingQuery, [user_id]);
+
+        const totalMeeting = totalMeetingResult.rows[0].total_meeting;
+        const acceptedCount = parseInt(acceptedResult.rows[0].accepted_count, 10);
+
+        // Calculate the acceptance rate
+        const acceptanceRate = totalMeeting > 0
+            ? (acceptedCount / totalMeeting) * 100
+            : 0;
+
+        // Return acceptance rate, total meetings requested, and accepted sessions
+        res.status(200).json({
+            acceptance_rate: acceptanceRate.toFixed(2),
+            total_meeting: totalMeeting,
+            total_accepted: acceptedCount
+        });
+    } catch (error) {
+        console.error("Error calculating acceptance rate:", error);
+        res.status(500).json({ message: "Internal server error" });
+    }
+};
+
+
+module.exports = { getUserSessionHistory, getSessionCountByDuration, getAcceptanceRate };
