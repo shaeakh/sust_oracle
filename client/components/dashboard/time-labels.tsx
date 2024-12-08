@@ -1,104 +1,135 @@
 "use client";
 
 import { Meeting } from "@/lib/types/meeting";
-import { format, getHours } from "date-fns";
+import { cn } from "@/lib/utils";
+import { format } from "date-fns";
+import { toZonedTime } from "date-fns-tz";
+import { useState } from "react";
+import { MeetingCard } from "./meeting-card";
+import { MeetingDialog } from "./meeting-dialog";
+
+const TIMEZONE = "Asia/Dhaka"; // Bangladesh Standard Time
 
 interface TimeLabelsProps {
-  startHour?: number;
-  endHour?: number;
+  meetings: Meeting[];
 }
 
-interface MeetingWithDisplayHour extends Meeting {
-  displayHour?: number; // Optional property for custom display hour
-}
+export function TimeLabels({ meetings }: TimeLabelsProps) {
+  // State for start and end hours
+  const [startHour, setStartHour] = useState<number>(9); // Default to 9 AM
+  const [endHour, setEndHour] = useState<number>(18); // Default to 6 PM
 
-const meetings: MeetingWithDisplayHour[] = [
-  {
-    id: 1,
-    title: "Weekly Team Sync",
-    url: "https://zoom.us/j/123456789",
-    stime: new Date("2024-01-20T10:00:00"), // 10:00 AM local time
-    etime: new Date("2024-01-20T11:00:00"),
-    user: [
-      { id: 1, username: "Nixon Deb Antu" },
-      { id: 2, username: "John Doe" },
-      { id: 3, username: "Jane Smith" },
-      { id: 4, username: "Alice Johnson" },
-    ],
-    location: "Main Conference Room",
-  },
-  {
-    id: 2,
-    title: "Product Review",
-    url: "https://zoom.us/j/987654321",
-    stime: new Date("2024-01-20T14:00:00"), // 2:00 PM local time
-    etime: new Date("2024-01-20T15:30:00"),
-    user: [
-      { id: 1, username: "Nixon Deb Antu" },
-      { id: 5, username: "Bob Wilson" },
-    ],
-    location: "Virtual",
-  },
-  {
-    id: 3,
-    title: "Client Presentation",
-    url: "https://zoom.us/j/456789123",
-    stime: new Date("2024-01-20T16:00:00"), // 4:00 PM local time
-    etime: new Date("2024-01-20T17:00:00"),
-    user: [
-      { id: 1, username: "Nixon Deb Antu" },
-      { id: 2, username: "John Doe" },
-      { id: 6, username: "Carol Brown" },
-    ],
-    location: "Meeting Room B",
-  },
-  {
-    id: 4,
-    title: "Special Meeting",
-    url: "https://zoom.us/j/1122334455",
-    stime: new Date("2024-01-20T11:20:00"), // 11:20 AM local time
-    etime: new Date("2024-01-20T12:00:00"),
-    user: [{ id: 1, username: "Nixon Deb Antu" }],
-    location: "Virtual",
-    displayHour: 4, // Custom display hour for this meeting
-  },
-];
-
-export function TimeLabels({ startHour = 0, endHour = 24 }: TimeLabelsProps) {
+  // Generate an array of hours between startHour and endHour
   const hours = Array.from(
-    { length: endHour - startHour },
+    { length: endHour - startHour + 1 },
     (_, i) => startHour + i
   );
 
+  const [selectedMeeting, setSelectedMeeting] = useState<Meeting | null>(null);
+  const [dialogOpen, setDialogOpen] = useState(false);
+
+  // Function to convert UTC date to Bangladesh Time
+  const convertToBST = (date: Date) => {
+    return toZonedTime(date, TIMEZONE);
+  };
+
+  const handleMeetingClick = (meeting: Meeting) => {
+    setSelectedMeeting(meeting);
+    setDialogOpen(true);
+  };
+
+  // Optional: Ensure that endHour is always greater than or equal to startHour
+  const handleStartHourChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const value = parseInt(e.target.value, 10);
+    if (!isNaN(value) && value <= endHour) {
+      setStartHour(value);
+    }
+  };
+
+  const handleEndHourChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const value = parseInt(e.target.value, 10);
+    if (!isNaN(value) && value >= startHour) {
+      setEndHour(value);
+    }
+  };
+
   return (
-    <>
-      {/* Time Labels */}
-      <div className="absolute inset-y-0 left-0 w-16 flex flex-col justify-between py-2 text-sm text-muted-foreground">
+    <div className="flex flex-col h-full p-4">
+      {/* Controls to adjust start and end hours */}
+      <div className="flex space-x-4 mb-6">
+        <div className="flex items-center">
+          <label
+            htmlFor="start-hour"
+            className="mr-2 text-sm font-medium text-gray-700"
+          >
+            Start Hour:
+          </label>
+          <input
+            type="number"
+            id="start-hour"
+            value={startHour}
+            onChange={handleStartHourChange}
+            min={0}
+            max={23}
+            className="w-16 p-2 border border-gray-300 rounded"
+          />
+        </div>
+        <div className="flex items-center">
+          <label
+            htmlFor="end-hour"
+            className="mr-2 text-sm font-medium text-gray-700"
+          >
+            End Hour:
+          </label>
+          <input
+            type="number"
+            id="end-hour"
+            value={endHour}
+            onChange={handleEndHourChange}
+            min={0}
+            max={23}
+            className="w-16 p-2 border border-gray-300 rounded"
+          />
+        </div>
+      </div>
+
+      {/* Time Labels and Meetings */}
+      <div className="flex flex-col flex-1 overflow-y-auto">
         {hours.map((hour) => (
-          <div key={hour} className="flex items-center justify-end pr-2 ">
-            {format(new Date().setHours(hour, 0, 0, 0), "h a")}
+          <div
+            key={hour}
+            className={cn(
+              "flex items-center h-16 border-t border-gray-200",
+              hour === endHour && "border-b"
+            )}
+          >
+            <span className="w-20 text-sm text-gray-500">
+              {format(new Date().setHours(hour, 0, 0, 0), "h:mm a")}
+            </span>
+            <div className="flex-1 flex flex-wrap gap-2">
+              {meetings
+                .filter((meeting) => {
+                  const bstStartTime = convertToBST(new Date(meeting.stime));
+                  return bstStartTime.getHours() === hour;
+                })
+                .map((meeting) => (
+                  <MeetingCard
+                    key={meeting.id}
+                    meeting={meeting}
+                    onClick={handleMeetingClick}
+                  />
+                ))}
+            </div>
           </div>
         ))}
       </div>
 
-      {/* Meeting Titles */}
-      <div className="absolute inset-0 grid grid-cols-1 ml-16 border-2 border-black">
-        {hours.map((hour) => (
-          <div key={hour} className="p-2 border-b border-gray-200">
-            {meetings
-              .filter((meeting) =>
-                meeting.displayHour !== undefined
-                  ? meeting.displayHour === hour
-                  : getHours(meeting.stime) === hour
-              )
-              .map((meeting) => (
-                <div key={meeting.id} className="text-blue-500">
-                  {meeting.title}
-                </div>
-              ))}
-          </div>
-        ))}
-      </div>
-    </>
+      {/* Meeting Dialog */}
+      <MeetingDialog
+        meeting={selectedMeeting}
+        open={dialogOpen}
+        onOpenChange={setDialogOpen}
+      />
+    </div>
   );
 }
