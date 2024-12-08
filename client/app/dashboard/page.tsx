@@ -1,16 +1,17 @@
 import { MeetingList } from "@/components/dashboard/meeting-list";
 import { TimeSlotDialog } from "@/components/dashboard/time-slot-dialog";
-import { UserSearch } from "@/components/dashboard/user-search";
+import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Meeting } from "@/lib/types/meeting";
 import { Calendar } from "lucide-react";
+import Link from "next/link";
 const meetings: Meeting[] = [
   {
     id: 1,
     title: "Weekly Team Sync",
     url: "https://zoom.us/j/123456789",
-    stime: new Date("2024-01-20T10:00:00"),
-    etime: new Date("2024-01-20T11:00:00"),
+    stime: new Date("2024-12-09T04:00:00.000Z"),
+    etime: new Date("2024-12-09T05:00:00.000Z"),
     user: [
       { id: 1, username: "Nixon Deb Antu" },
       { id: 2, username: "John Doe" },
@@ -23,8 +24,8 @@ const meetings: Meeting[] = [
     id: 2,
     title: "Product Review",
     url: "https://zoom.us/j/987654321",
-    stime: new Date("2024-01-20T14:00:00"),
-    etime: new Date("2024-01-20T15:30:00"),
+    stime: new Date("2024-12-09T08:00:00.000Z"),
+    etime: new Date("2024-12-09T09:30:00.000Z"),
     user: [
       { id: 1, username: "Nixon Deb Antu" },
       { id: 5, username: "Bob Wilson" },
@@ -35,8 +36,8 @@ const meetings: Meeting[] = [
     id: 3,
     title: "Client Presentation",
     url: "https://zoom.us/j/456789123",
-    stime: new Date("2024-01-20T16:00:00"),
-    etime: new Date("2024-01-20T17:00:00"),
+    stime: new Date("2024-12-09T10:00:00.000Z"),
+    etime: new Date("2024-12-09T13:00:00.000Z"),
     user: [
       { id: 1, username: "Nixon Deb Antu" },
       { id: 2, username: "John Doe" },
@@ -74,10 +75,14 @@ export default function Home() {
                 </CardContent>
               </Card>
 
-              {/* Search Bar */}
-              <div className="max-w-md">
-                <UserSearch />
-              </div>
+              <Link href={"/community"}>
+                <Button
+                  size="lg"
+                  className="bg-primary text-primary-foreground hover:bg-primary/90"
+                >
+                  Join to community
+                </Button>
+              </Link>
             </div>
           </main>
           <div className="container mx-auto py-8">
