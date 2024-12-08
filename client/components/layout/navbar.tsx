@@ -189,12 +189,12 @@ export function Navbar() {
                         Profile
                       </DropdownMenuRadioItem>
                     </Link>
-                    <Link href="/forum">
+                    <Link href="/community">
                       <DropdownMenuRadioItem
                         className=" active:text-white focus:text-white"
                         value="Forum"
                       >
-                        Forum
+                        Community
                       </DropdownMenuRadioItem>
                     </Link>
                     <Link href="/admin_panel">
