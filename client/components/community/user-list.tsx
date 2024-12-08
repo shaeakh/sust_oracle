@@ -5,7 +5,7 @@ import { Card } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { CheckCircle2, MapPin } from 'lucide-react';
 import type { User } from '@/lib/types/user';
-import { headers } from 'next/headers';
+import { useRouter } from 'next/navigation';
 
 interface UserListProps {
   searchQuery: string;
@@ -14,6 +14,8 @@ interface UserListProps {
 }
 
 export function UserList({ searchQuery, users, setUsers }: UserListProps) {
+  const router = useRouter();
+
   useEffect(() => {
     const fetchUsers = async () => {
       try {
@@ -26,10 +28,6 @@ export function UserList({ searchQuery, users, setUsers }: UserListProps) {
           }
         );
         const data = await response.json();
-        console.log('Fetched data:', data);
-        console.log('Data type:', typeof data);
-        console.log('Is Array:', Array.isArray(data));
-        // Ensure we're setting an array
         setUsers(Array.isArray(data) ? data : Array.isArray(data.users) ? data.users : []);
       } catch (error) {
         console.error('Error fetching users:', error);
@@ -44,10 +42,18 @@ export function UserList({ searchQuery, users, setUsers }: UserListProps) {
     user?.user_name?.toLowerCase().includes(searchQuery.toLowerCase())
   ) : [];
 
+  const handleUserClick = (userId: number) => {
+    router.push(`/user/${userId}`);
+  };
+
   return (
     <div className="grid gap-4 md:grid-cols-2">
       {filteredUsers.map((user) => (
-        <Card key={user.uid} className="p-6">
+        <Card 
+          key={user.uid} 
+          className="p-6 cursor-pointer transition-all duration-300 hover:shadow-lg hover:scale-[1.02] active:scale-[0.98]"
+          onClick={() => handleUserClick(user.uid)}
+        >
           <div className="flex items-start justify-between">
             <div className="space-y-1">
               <div className="flex items-center gap-2">
