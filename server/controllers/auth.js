@@ -215,7 +215,7 @@ const login = async (req, res) => {
     const token = jwt.sign({ uid: emailResult.rows[0].uid, email: emailResult.rows[0].user_email }, process.env.SECRET, { expiresIn: remember ? "30d" : "1d" });
 
     // send success response
-    return res.status(200).json({ message: "Login successful", token: token });
+    return res.status(200).json({ message: "Login successful", token: token, uid: emailResult.rows[0].uid });
 
   } catch (error) {
     console.error("Error in login:", error.message);
