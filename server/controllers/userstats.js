@@ -52,4 +52,54 @@ const getUserSessionHistory = async (req, res) => {
     }
 };
 
-module.exports = { getUserSessionHistory };
+const getSessionCountByDuration = async (req, res) => {
+    const { uid } = req.user;
+
+    try {
+        // Query to fetch the sessions the user participated in, including start and end time
+        const query = `
+            SELECT start_time, end_time
+            FROM sessions
+            WHERE (host_id = $1 OR guest_id = $1)
+            AND status = true
+        `;
+        const result = await pool.query(query, [uid]);
+
+        if (result.rows.length === 0) {
+            return res.status(200).json([]);
+        }
+
+        // Calculate duration in minutes for each session and group by duration
+        const durationCounts = result.rows.reduce((acc, session) => {
+            const startTime = new Date(session.start_time);
+            const endTime = new Date(session.end_time);
+            
+            // Calculate duration in minutes
+            const duration = (endTime - startTime) / 1000 / 60;  // duration in minutes
+            
+            // Round the duration to the nearest integer (optional)
+            const roundedDuration = Math.round(duration);
+
+            // Accumulate the session count for each duration
+            acc[roundedDuration] = (acc[roundedDuration] || 0) + 1;
+            return acc;
+        }, {});
+
+        // Convert the grouped durations into an array of objects
+        const history = Object.entries(durationCounts).map(([duration, count]) => ({
+            duration: parseInt(duration),  // Ensure duration is an integer
+            session_count: count,
+        }));
+
+        // Sort the array by duration in ascending order
+        const sortedHistory = history.sort((a, b) => a.duration - b.duration);
+
+        // Return the sorted response
+        res.status(200).json(sortedHistory);
+    } catch (error) {
+        console.error("Error fetching user session history by duration:", error);
+        res.status(500).json({ message: "Internal server error" });
+    }
+};
+
+module.exports = { getUserSessionHistory, getSessionCountByDuration };
