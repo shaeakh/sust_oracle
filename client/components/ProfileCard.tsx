@@ -9,50 +9,35 @@ import { motion } from "framer-motion";
 import { Edit, Mail, Save, User } from "lucide-react";
 import { useEffect, useState } from "react";
 import { toast } from "react-toastify";
-import EditableArraySection from "./EditableArraySection";
 
 interface profile_info {
   uid: number;
   user_name: string;
   user_image: string | null;
   user_email: string;
-  age: number | null;
-  gender: string | null;
+  bio: string | null;
+  location: string | null;
   isverified: boolean;
-  skills: string[] | null;
 }
 
-interface ProfileData {
-  name: string;
-  email: string;
-  age: number;
-  gender: string;
-  height: number;
-  weight: number;
-  fitness_level: string;
-  workout_preference: string[];
-  diet_restrictions: string[];
-  health_conditions: string[];
-}
-
-const i: profile_info = {
+const initialD: profile_info = {
   uid: 0,
   user_name: "",
   user_image: null,
   user_email: "",
-  age: 0,
-  gender: "",
+  bio: null,
+  location: null,
   isverified: false,
-  skills: null,
 };
 
 export default function ProfileCard() {
-  const [initialData, setinitialData] = useState<profile_info>(i);
-  const [data, setData] = useState<profile_info>(i);
+  const [initialData, setInitialData] = useState<profile_info>(initialD);
+  const [data, setData] = useState<profile_info>(initialData);
   const [editingField, setEditingField] = useState<string | null>(null);
   const [isChanged, setIsChanged] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
   const token = localStorage.getItem("token");
+
   const fetch_data = async () => {
     axios
       .get(`${process.env.NEXT_PUBLIC_IP_ADD}/user/profile`, {
@@ -61,10 +46,11 @@ export default function ProfileCard() {
         },
       })
       .then((res) => {
-        setinitialData(res.data);
+        setInitialData(res.data);
         setData(res.data);
       });
   };
+
   useEffect(() => {
     setIsChanged(JSON.stringify(data) !== JSON.stringify(initialData));
     fetch_data();
@@ -80,19 +66,13 @@ export default function ProfileCard() {
     setIsChanged(true);
   };
 
-  const handleArrayUpdate = (field: keyof profile_info, newArray: string[]) => {
-    setData((prevData) => ({ ...prevData, [field]: newArray }));
-    setIsChanged(true);
-  };
-
   const handleSaveAll = async () => {
     if (isLoading) return;
     const temp = {
       user_name: data.user_name,
       user_email: data.user_email,
-      age: data.age,
-      gender: data.gender,
-      skills: data.skills,
+      bio: data.bio,
+      location: data.location,
     };
 
     setIsLoading(true);
@@ -170,30 +150,23 @@ export default function ProfileCard() {
           <div className="grid grid-cols-2 gap-4">
             <EditableInfoItem
               icon={<User />}
-              label="Age"
-              value={data.age || ""}
-              field="age"
+              label="Bio"
+              value={data.bio || ""}
+              field="bio"
               editingField={editingField}
               handleEdit={handleEdit}
               handleSave={handleSave}
-              type="number"
             />
             <EditableInfoItem
               icon={<User />}
-              label="Gender"
-              value={data.gender || ""}
-              field="gender"
+              label="Location"
+              value={data.location || ""}
+              field="location"
               editingField={editingField}
               handleEdit={handleEdit}
               handleSave={handleSave}
             />
           </div>
-
-          <EditableArraySection
-            title="Skills"
-            items={data.skills || []}
-            onUpdate={(newArray) => handleArrayUpdate("skills", newArray)}
-          />
         </CardContent>
       </Card>
       {isChanged && (
