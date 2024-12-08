@@ -40,9 +40,9 @@ async function createTables() {
               schedule_id INT NOT NULL REFERENCES schedules(id),
               start_time TIMESTAMP NOT NULL,
               end_time TIMESTAMP NOT NULL,
-              title VARCHAR(255),
-              meeting_host_url VARCHAR(255),
-              meeting_url VARCHAR(255),
+              title VARCHAR(512),
+              meeting_host_url VARCHAR(2048),
+              meeting_url VARCHAR(2048),
               status BOOLEAN NOT NULL DEFAULT FALSE,
               CONSTRAINT no_overlap_sessions UNIQUE (host_id, start_time, end_time)
           );
@@ -53,6 +53,12 @@ async function createTables() {
               available_start TIMESTAMP NOT NULL,
               available_end TIMESTAMP NOT NULL,
               CONSTRAINT no_overlap_availability UNIQUE (schedule_id, available_start, available_end)
+          );
+
+          -- Table for zoom token with one hour expiry
+          CREATE TABLE IF NOT EXISTS zoom_tokens (
+              token TEXT NOT NULL,
+              created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
           );
 
             `);

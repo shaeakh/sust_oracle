@@ -1,4 +1,74 @@
 const { pool } = require("../db/dbconnect");
+const { generateMeetingUrl } = require("../utils/generateMeetingUrl");
+const singleMailService = require("../utils/mailService");
+
+async function processApprovedSession(session) {
+    try {
+        // Fetch host and guest details
+        const userQuery = `
+            SELECT uid, user_name, user_email 
+            FROM users 
+            WHERE uid IN($1, $2)
+        `;
+        const userResult = await pool.query(userQuery, [session.host_id, session.guest_id]);
+
+        // Ensure that host and guest details are correctly assigned
+        const host = userResult.rows.find(user => user.uid === session.host_id);
+        const guest = userResult.rows.find(user => user.uid === session.guest_id);
+
+        // Check if host and guest are properly found, else throw error
+        if (!host || !guest) {
+            throw new Error('Host or Guest not found');
+        }
+
+        // Generate meeting URL
+        const meetingData = {
+            title: session.title,
+            stime: session.start_time
+        };
+        const { meetingUrl, meeting_host_url } = await generateMeetingUrl(meetingData);
+
+        // Update session with meeting URLs
+        const updateQuery = `
+            UPDATE sessions 
+            SET meeting_url = $1, meeting_host_url = $2 
+            WHERE id = $3
+        `;
+        await pool.query(updateQuery, [meetingUrl, meeting_host_url, session.id]);
+
+        // Send emails to host and guest
+        await sendSessionEmails(session, host, guest, meetingUrl, meeting_host_url);
+    } catch (error) {
+        console.error("Error processing approved session:", error);
+    }
+}
+
+async function sendSessionEmails(session, host, guest, meetingUrl, meeting_host_url) {
+    // Email to host
+    const hostEmailBody = `    
+        <p>Dear ${host.user_name},</p>
+        <p>Your session "${session.title}" has been confirmed.</p>
+        <p>Meeting Link (Host): ${meeting_host_url}</p>
+        <p>Meeting Link (Guest): ${meetingUrl}</p>
+        <p>Start Time: ${session.start_time}</p>
+        <p>Guest: ${guest.user_name}</p>
+    `;
+
+    await singleMailService(host.user_email, "Session Confirmed", hostEmailBody);
+
+    // Email to guest
+    const guestEmailBody = ` 
+        <p>Dear ${guest.user_name},</p>
+        <p>Your session "${session.title}" has been confirmed.</p>
+        <p>Meeting Link: ${meetingUrl}</p>
+        <p>Start Time: ${session.start_time}</p>
+        <p>Host: ${host.user_name}</p>
+        `
+        ;
+
+    await singleMailService(guest.user_email, "Session Confirmed", guestEmailBody);
+}
+
 
 const getSessionsByUser = async (req, res) => {
     const { uid } = req.user;
@@ -117,6 +187,10 @@ const createSession = async (req, res) => {
         const insertValues = [host_id, guest_id, schedule_id, start_time, end_time, title, status];
         const insertResult = await pool.query(insertQuery, insertValues);
 
+        if (status) {
+            await processApprovedSession(insertResult.rows[0]);
+        }
+
         res.status(201).json(insertResult.rows[0]);
     } catch (error) {
         console.error("Error creating session:", error);
@@ -144,6 +218,9 @@ const approveSession = async (req, res) => {
         const updateQuery = `UPDATE sessions SET status = true WHERE id = $1 RETURNING *`;
         const updateValues = [session_id];
         const updateResult = await pool.query(updateQuery, updateValues);
+
+        // Process the approved session
+        await processApprovedSession(updateResult.rows[0]);
 
         // Delete all overlapping sessions for the host with status false
         const deleteQuery = `
