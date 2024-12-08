@@ -4,7 +4,9 @@ import { MeetingList } from "@/components/dashboard/meeting-list";
 import { TimeSlotDialog } from "@/components/dashboard/time-slot-dialog";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Meeting } from "@/lib/types/meeting";
+import axios from "axios";
 import { Calendar } from "lucide-react";
+import { useEffect, useState } from "react";
 
 const meetings: Meeting[] = [
   {
@@ -54,7 +56,33 @@ const meetings: Meeting[] = [
   },
 ];
 
+const i_m: Meeting = {
+  id: 0,
+  host_id: 1,
+  schedule_id: 0,
+  title: "",
+  meeting_url: "",
+  stime: "",
+  etime: "",
+  status: false,
+  user: [{ id: 0, username: "" }],
+};
+
 export default function Home() {
+  const [m, setM] = useState<Meeting[]>([]);
+  const fetch_data = () => {
+    axios.get(`${process.env.NEXT_PUBLIC_IP_ADD}/session`,{
+      headers: {
+        Authorization: `Bearer ${localStorage.getItem("token")}`,
+      },
+    }).then((res)=>{
+      setM(res.data);
+    });
+  };
+  useEffect(() => {
+    fetch_data();
+  }, []);
+
   return (
     <>
       <div className="min-h-screen bg-cover bg-center bg-no-repeat bg-fit p-8">
