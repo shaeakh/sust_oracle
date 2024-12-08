@@ -12,6 +12,7 @@ async function createTables() {
                 isverified BOOLEAN NOT NULL DEFAULT FALSE,
                 bio VARCHAR(1000),
                 location VARCHAR(255),
+                user_image VARCHAR(255),
                 created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
             );
 

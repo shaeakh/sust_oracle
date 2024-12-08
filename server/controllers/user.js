@@ -4,7 +4,7 @@ const getUser = async (req, res) => {
     const {uid} = req.user;
     try {
         // return user info without password
-        const query = "SELECT uid, user_name, user_email, bio, location, isverified FROM users WHERE uid = $1";
+        const query = "SELECT uid, user_name, user_email, bio, location, isverified, user_image FROM users WHERE uid = $1";
         const result = await pool.query(query, [uid]);
         if (result.rows.length === 0) {
             return res.status(404).json({ message: "User not found" });
@@ -20,7 +20,7 @@ const getUser = async (req, res) => {
 const updateUser = async (req, res) => {
     const {uid} = req.user;
     const updates = req.body;
-    const allowedFields = ["user_name", "user_email", "bio", "location"];
+    const allowedFields = ["user_name", "user_email", "bio", "location", "user_image"];
     const validUpdates = Object.keys(updates).filter((key) => allowedFields.includes(key));
     try {
         const query = `UPDATE users SET ${validUpdates.map((key) => `${key} = $${validUpdates.indexOf(key) + 1}`).join(", ")} WHERE uid = $${validUpdates.length + 1} RETURNING *`;
@@ -40,7 +40,7 @@ const updateUser = async (req, res) => {
 
 const getAllUsers = async (req, res) => {
     try {
-        const query = "SELECT uid, user_name, user_email, bio, location, isverified FROM users";
+        const query = "SELECT uid, user_name, user_email, bio, location, isverified, user_image FROM users";
         const result = await pool.query(query);
         res.json(result.rows);
     } catch (error) {
