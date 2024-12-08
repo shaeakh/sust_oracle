@@ -5,6 +5,7 @@ const { connectToDB } = require("./db/dbconnect");
 const { createTables } = require("./db/tables");
 const authRouter = require("./routes/auth");
 const userRouter = require("./routes/user");
+const scheduleRouter = require("./routes/schedules");
 
 const app = express();
 const PORT = 5050;
@@ -23,6 +24,7 @@ app.get("/", (req, res) => {
 
 app.use("/auth", authRouter);
 app.use("/user", userRouter);
+app.use("/schedules", scheduleRouter);
 
 app.listen(PORT, async () => {
   await connectToDB();
