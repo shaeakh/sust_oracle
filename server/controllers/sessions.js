@@ -196,4 +196,60 @@ const deleteSession = async (req, res) => {
     }
 };
 
-module.exports = { getSessionsByUser, getSessionById, createSession, approveSession, deleteSession };
+const getCustomSessionById = async (req, res) => {
+    const { session_id } = req.params;
+    const { uid } = req.user;
+
+    try {
+        // Fetch session details
+        const sessionQuery = `
+            SELECT * FROM sessions 
+            WHERE id = $1 
+              AND (host_id = $2 OR guest_id = $2) 
+              AND end_time > NOW()
+        `;
+        const sessionResult = await pool.query(sessionQuery, [session_id, uid]);
+
+        if (sessionResult.rows.length === 0) {
+            return res.status(404).json({ message: "Session not found" });
+        }
+
+        const session = sessionResult.rows[0];
+        const { host_id, guest_id, meeting_host_url, meeting_url } = session;
+
+        // Fetch guest user details (excluding host)
+        const usersQuery = `
+            SELECT uid AS id, user_name AS username 
+            FROM users 
+            WHERE uid = $1
+        `;
+        const usersResult = await pool.query(usersQuery, [guest_id]);
+
+        // Prepare the `user` array with only guest details
+        const userArray = usersResult.rows.map((user) => ({
+            id: user.id,
+            username: user.username,
+        }));
+
+        // Prepare the response object
+        const response = {
+            id: session.id,
+            host_id: session.host_id,
+            schedule_id: session.schedule_id,
+            stime: session.start_time,
+            etime: session.end_time,
+            title: session.title,
+            meeting_url: session.host_id === uid ? meeting_host_url : meeting_url,
+            status: session.status,
+            user: userArray, // Contains only guest details
+        };
+
+        res.status(200).json(response);
+    } catch (error) {
+        console.error("Error fetching custom session data:", error);
+        res.status(500).json({ message: "Internal server error" });
+    }
+};
+
+
+module.exports = { getSessionsByUser, getSessionById, createSession, approveSession, deleteSession, getCustomSessionById };
