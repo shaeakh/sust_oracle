@@ -288,7 +288,7 @@ const getCustomSessionsByUser = async (req, res) => {
         const sessionsResult = await pool.query(sessionsQuery, [user_id]);
 
         if (sessionsResult.rows.length === 0) {
-            return res.status(404).json({ message: "No sessions found for the user" });
+            return res.json([]);
         }
 
         // Iterate through the sessions and construct the response

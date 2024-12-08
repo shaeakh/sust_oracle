@@ -48,6 +48,7 @@ export const LoginForm: React.FC<LoginFormProps> = ({ onToggle }) => {
         .then((res) => {
           if (res.status >= 200 && res.status < 300) {
             localStorage.setItem("token", res.data.token);
+            localStorage.setItem("uid", res.data.uid);
             setClickable(true);
             router.push("/dashboard");
           } else {
