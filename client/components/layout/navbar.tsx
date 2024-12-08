@@ -186,14 +186,6 @@ export function Navbar() {
                         Profile
                       </DropdownMenuRadioItem>
                     </Link>
-                    <Link href="/settings">
-                      <DropdownMenuRadioItem
-                        className=" active:text-white focus:text-white"
-                        value="Settings"
-                      >
-                        Settings
-                      </DropdownMenuRadioItem>
-                    </Link>
                     <Link href="/forum">
                       <DropdownMenuRadioItem
                         className=" active:text-white focus:text-white"
@@ -202,6 +194,23 @@ export function Navbar() {
                         Forum
                       </DropdownMenuRadioItem>
                     </Link>
+                    <Link href="/admin_panel">
+                      <DropdownMenuRadioItem
+                        className=" active:text-white focus:text-white"
+                        value="Forum"
+                      >
+                        Admin Panel
+                      </DropdownMenuRadioItem>
+                    </Link>
+                    <Link href="/settings">
+                      <DropdownMenuRadioItem
+                        className=" active:text-white focus:text-white"
+                        value="Settings"
+                      >
+                        Settings
+                      </DropdownMenuRadioItem>
+                    </Link>
+
                     <Link href="/dashboard">
                       <DropdownMenuRadioItem
                         className=" active:text-white focus:text-white"
