@@ -47,8 +47,8 @@ interface TimeSlot {
 
 interface ScheduleFormData {
   schedule_id: number;
-  start_time: string; // Will send in UTC
-  end_time: string; // Will send in UTC
+  start_time: string; // Will send in local time
+  end_time: string; // Will send in local time
   title: string;
 }
 
@@ -92,6 +92,7 @@ export function TimeSlotDisplay({ userId }: { userId: number }) {
       
       // Convert UTC times to local timezone for display
       const slotsWithLocalTime = data.map((slot: TimeSlot) => ({
+
         ...slot,
         start_time: DateTime.fromISO(slot.start_time, { zone: 'utc' }).toLocal().toISO(),
         end_time: DateTime.fromISO(slot.end_time, { zone: 'utc' }).toLocal().toISO()
@@ -111,18 +112,31 @@ export function TimeSlotDisplay({ userId }: { userId: number }) {
   const handleSlotClick = (slot: TimeSlot) => {
     setSelectedSlot(slot);
     
-    // Parse the times directly from the slot's original times
-    const start = DateTime.fromISO(slot.start_time);
-    const end = DateTime.fromISO(slot.end_time);
+    // Parse the times in local timezone and ensure we use the same date
+    const slotDate = DateTime.fromISO(slot.start_time).setZone('local');
+    const start = DateTime.fromISO(slot.start_time)
+      .setZone('local')
+      .set({ 
+        year: slotDate.year,
+        month: slotDate.month, 
+        day: slotDate.day 
+      });
+    const end = DateTime.fromISO(slot.end_time)
+      .setZone('local')
+      .set({ 
+        year: slotDate.year,
+        month: slotDate.month, 
+        day: slotDate.day 
+      });
     
     setStartTime(start);
     setEndTime(end);
     
-    // Use the exact times from the slot
+    // Send the local time with consistent date
     setFormData({
       schedule_id: slot.id,
-      start_time: slot.start_time.split('.')[0], // Remove any milliseconds
-      end_time: slot.end_time.split('.')[0], // Remove any milliseconds
+      start_time: start.toFormat("yyyy-MM-dd'T'HH:mm:ss"),
+      end_time: end.toFormat("yyyy-MM-dd'T'HH:mm:ss"),
       title: "Let's talk"
     });
     
@@ -134,18 +148,19 @@ export function TimeSlotDisplay({ userId }: { userId: number }) {
 
     const [hours, minutes] = timeStr.split(':').map(Number);
     
-    // Use the original slot's date
-    const baseDate = type === 'start' 
-      ? DateTime.fromISO(selectedSlot.start_time)
-      : DateTime.fromISO(selectedSlot.end_time);
+    // Get the date from the selected slot
+    const slotDate = DateTime.fromISO(selectedSlot.start_time).setZone('local');
     
-    // Set only the time part, keeping the original date
-    const newDateTime = baseDate.set({
+    // Create new DateTime with the slot's date and selected time
+    const newDateTime = DateTime.fromObject({
+      year: slotDate.year,
+      month: slotDate.month,
+      day: slotDate.day,
       hour: hours,
       minute: minutes,
       second: 0,
       millisecond: 0
-    });
+    }, { zone: 'local' });
 
     if (type === 'start') {
       setStartTime(newDateTime);
@@ -165,8 +180,9 @@ export function TimeSlotDisplay({ userId }: { userId: number }) {
   const validateTimeSlot = () => {
     if (!selectedSlot || !startTime || !endTime) return false;
 
-    const slotStart = DateTime.fromISO(selectedSlot.start_time);
-    const slotEnd = DateTime.fromISO(selectedSlot.end_time);
+    // Convert slot times to local timezone for comparison
+    const slotStart = DateTime.fromISO(selectedSlot.start_time).setZone('local');
+    const slotEnd = DateTime.fromISO(selectedSlot.end_time).setZone('local');
     
     // All comparisons in local time
     if (startTime < slotStart || startTime >= slotEnd) {

@@ -2,6 +2,7 @@ const { pool } = require("../db/dbconnect");
 const { generateMeetingUrl } = require("../utils/generateMeetingUrl");
 const singleMailService = require("../utils/mailService");
 const { DateTime } = require("luxon");
+const { localToUTC, UTCToLocal } = require("../utils/timeUtils");
 
 async function processApprovedSession(session) {
     try {
@@ -126,12 +127,16 @@ const createSession = async (req, res) => {
     }
 
     try {
+        // Keep times in their original timezone
+        const startDateTime = DateTime.fromISO(start_time);
+        const endDateTime = DateTime.fromISO(end_time);
+
         // Check if the schedule exists and is valid for the given times
         const scheduleQuery = `
             SELECT * FROM schedules 
             WHERE id = $1 AND start_time <= $2 AND end_time >= $3
         `;
-        const scheduleResult = await pool.query(scheduleQuery, [schedule_id, start_time, end_time]);
+        const scheduleResult = await pool.query(scheduleQuery, [schedule_id, startDateTime.toISO(), endDateTime.toISO()]);
 
         if (scheduleResult.rows.length === 0) {
             return res.status(404).json({ message: "Schedule not found or not valid for the provided times" });
@@ -140,12 +145,10 @@ const createSession = async (req, res) => {
         const schedule = scheduleResult.rows[0];
         const { user_id: host_id, min_duration, max_duration } = schedule;
 
-        const start = DateTime.fromISO(start_time).toUTC();
-        const end = DateTime.fromISO(end_time).toUTC();
-        const sessionDuration = end.diff(start, 'minutes').minutes;
+        const sessionDuration = endDateTime.diff(startDateTime, 'minutes').minutes;
         if (sessionDuration < min_duration || sessionDuration > max_duration) {
-            return res.status(400).json({
-                message: `Session duration must be between ${min_duration} and ${max_duration} minutes`,
+            return res.status(400).json({ 
+                message: `Session duration must be between ${min_duration} and ${max_duration} minutes` 
             });
         }
 
@@ -155,7 +158,7 @@ const createSession = async (req, res) => {
             WHERE guest_id = $1 AND schedule_id = $2 
             AND start_time = $3 AND end_time = $4
         `;
-        const userRequestResult = await pool.query(userRequestQuery, [guest_id, schedule_id, start_time, end_time]);
+        const userRequestResult = await pool.query(userRequestQuery, [guest_id, schedule_id, startDateTime.toISO(), endDateTime.toISO()]);
 
         if (userRequestResult.rows.length > 0) {
             return res.status(400).json({ message: "You have already requested a session for this time." });
@@ -168,7 +171,7 @@ const createSession = async (req, res) => {
               AND NOT ($2::timestamp >= end_time OR $3::timestamp <= start_time)
               AND status = true
         `;
-        const hostOverlapValues = [host_id, start_time, end_time];
+        const hostOverlapValues = [host_id, startDateTime.toISO(), endDateTime.toISO()];
         const hostOverlapResult = await pool.query(hostOverlapQuery, hostOverlapValues);
 
         if (hostOverlapResult.rows.length > 0) {
@@ -182,7 +185,7 @@ const createSession = async (req, res) => {
               AND NOT ($2::timestamp >= end_time OR $3::timestamp <= start_time)
               AND status = true
         `;
-        const guestOverlapValues = [guest_id, start_time, end_time];
+        const guestOverlapValues = [guest_id, startDateTime.toISO(), endDateTime.toISO()];
         const guestOverlapResult = await pool.query(guestOverlapQuery, guestOverlapValues);
 
         if (guestOverlapResult.rows.length > 0) {
@@ -196,7 +199,7 @@ const createSession = async (req, res) => {
             VALUES ($1, $2, $3, $4, $5, $6, $7) 
             RETURNING *
         `;
-        const insertValues = [host_id, guest_id, schedule_id, start_time, end_time, title, status];
+        const insertValues = [host_id, guest_id, schedule_id, startDateTime.toISO(), endDateTime.toISO(), title, status];
         const insertResult = await pool.query(insertQuery, insertValues);
 
         const updateTotalMeetingQuery = `
@@ -210,7 +213,12 @@ const createSession = async (req, res) => {
             await processApprovedSession(insertResult.rows[0]);
         }
 
-        res.status(201).json(insertResult.rows[0]);
+        // Convert times back to local timezone for response
+        const session = insertResult.rows[0];
+        session.start_time = UTCToLocal(session.start_time);
+        session.end_time = UTCToLocal(session.end_time);
+
+        res.status(201).json(session);
     } catch (error) {
         console.error(error);
         if (error.code === '23505' && error.constraint === 'no_overlap_sessions') {

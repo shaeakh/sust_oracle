@@ -19,6 +19,7 @@
     "express": "^4.21.2",
     "jsonwebtoken": "^9.0.2",
     "luxon": "^3.5.0",
+    "moment-timezone": "^0.5.46",
     "nodemailer": "^6.9.16",
     "openai": "^4.76.0",
     "pg": "^8.13.1",
