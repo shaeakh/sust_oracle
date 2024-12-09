@@ -106,6 +106,16 @@ const getAcceptanceRate = async (req, res) => {
     const { user_id } = req.params;
 
     try {
+        // Query to get the total number of meetings (both hosted and attended)
+        const totalMeetingQuery = `
+            SELECT 
+                (SELECT COUNT(*) FROM sessions WHERE host_id = $1) +
+                (SELECT COUNT(*) FROM sessions WHERE guest_id = $1) as total_meeting
+            FROM users 
+            WHERE uid = $1
+        `;
+        const totalMeetingResult = await pool.query(totalMeetingQuery, [user_id]);
+
         // Query to get the user's total number of accepted sessions
         const acceptedQuery = `
             SELECT COUNT(*) AS accepted_count
@@ -114,16 +124,16 @@ const getAcceptanceRate = async (req, res) => {
         `;
         const acceptedResult = await pool.query(acceptedQuery, [user_id]);
 
-        // Query to get the user's total number of meetings requested
-        const totalMeetingQuery = `
-            SELECT total_meeting
-            FROM users
-            WHERE uid = $1
-        `;
-        const totalMeetingResult = await pool.query(totalMeetingQuery, [user_id]);
+        // Check if user exists
+        if (!totalMeetingResult.rows.length) {
+            return res.status(404).json({
+                success: false,
+                message: "User not found"
+            });
+        }
 
-        const totalMeeting = totalMeetingResult.rows[0].total_meeting;
-        const acceptedCount = parseInt(acceptedResult.rows[0].accepted_count, 10);
+        const totalMeeting = parseInt(totalMeetingResult.rows[0]?.total_meeting || 0, 10);
+        const acceptedCount = parseInt(acceptedResult.rows[0]?.accepted_count || 0, 10);
 
         // Calculate the acceptance rate
         const acceptanceRate = totalMeeting > 0
@@ -132,7 +142,7 @@ const getAcceptanceRate = async (req, res) => {
 
         // Return acceptance rate, total meetings requested, and accepted sessions
         res.status(200).json({
-            acceptance_rate: acceptanceRate.toFixed(2),
+            acceptance_rate: Math.min(100, acceptanceRate).toFixed(2), // Cap at 100%
             total_meeting: totalMeeting,
             total_accepted: acceptedCount
         });
@@ -142,5 +152,64 @@ const getAcceptanceRate = async (req, res) => {
     }
 };
 
+const getUserSessions = async (req, res) => {
+    const { user_id } = req.query;
+    const range = req.query.range || 'this-week'; // Default to 'this-week'
 
-module.exports = { getUserSessionHistory, getSessionCountByDuration, getAcceptanceRate };
+    if (!user_id) {
+        return res.status(400).json({ message: 'User ID is required' });
+    }
+
+    try {
+        let dateFilterQuery = '';
+        const currentDate = new Date();
+        const startOfWeek = new Date();
+        startOfWeek.setDate(currentDate.getDate() - currentDate.getDay()); // Sunday of this week
+        startOfWeek.setHours(0, 0, 0, 0);
+        
+        switch (range) {
+            case 'today':
+                dateFilterQuery = `AND start_time >= CURRENT_DATE AND start_time < CURRENT_DATE + INTERVAL '1 day'`;
+                break;
+            case 'this-week':
+                dateFilterQuery = `AND start_time >= '${startOfWeek.toISOString()}' AND start_time < '${new Date(startOfWeek.setDate(startOfWeek.getDate() + 7)).toISOString()}'`;
+                break;
+            case 'this-month':
+                dateFilterQuery = `AND start_time >= DATE_TRUNC('month', CURRENT_DATE)`;
+                break;
+            case 'this-year':
+                dateFilterQuery = `AND start_time >= DATE_TRUNC('year', CURRENT_DATE)`;
+                break;
+            case 'life-time':
+                dateFilterQuery = '';
+                break;
+            default:
+                return res.status(400).json({ message: 'Invalid range value' });
+        }
+
+        // SQL query to fetch sessions with status = true
+        const query = `
+            SELECT id, host_id, guest_id, schedule_id, start_time, end_time, title, status
+            FROM sessions
+            WHERE (host_id = $1 OR guest_id = $1) 
+              AND status = true
+              ${dateFilterQuery}
+            ORDER BY start_time DESC
+        `;
+        
+        const result = await pool.query(query, [user_id]);
+        
+        // Check if no sessions are found
+        if (result.rows.length === 0) {
+            return res.status(404).json({ message: 'No sessions found for this user' });
+        }
+
+        // Return sessions as JSON
+        res.status(200).json(result.rows);
+    } catch (error) {
+        console.error('Error fetching user sessions:', error);
+        res.status(500).json({ message: 'Internal server error' });
+    }
+};
+
+module.exports = { getUserSessionHistory, getSessionCountByDuration, getAcceptanceRate, getUserSessions };

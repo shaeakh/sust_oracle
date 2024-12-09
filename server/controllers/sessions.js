@@ -212,7 +212,12 @@ const createSession = async (req, res) => {
 
         res.status(201).json(insertResult.rows[0]);
     } catch (error) {
-        console.error("Error creating session:", error);
+        console.error(error);
+        if (error.code === '23505' && error.constraint === 'no_overlap_sessions') {
+            return res.status(409).json({ 
+                message: "This time slot is already booked. Please choose another time." 
+            });
+        }
         res.status(500).json({ message: "Internal server error" });
     }
 };

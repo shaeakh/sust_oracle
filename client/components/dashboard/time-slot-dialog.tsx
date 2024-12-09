@@ -1,5 +1,4 @@
 "use client";
-
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Calendar } from "@/components/ui/calendar";
@@ -30,6 +29,8 @@ import {
 } from "@/components/ui/popover";
 import { useToast } from "@/components/ui/use-toast";
 import { cn } from "@/lib/utils";
+import { utc_to_ur_date, utc_to_ur_time } from "@/utils/utc_to_ur_time_zone";
+import axios from "axios";
 import {
   BarChart2,
   CalendarIcon,
@@ -57,6 +58,7 @@ interface TimeSlot {
 }
 
 export function TimeSlotDialog() {
+  const [timezone, setTimeZone] = useState("Asia/Dhaka");
   const [date, setDate] = useState<Date>();
   const [startTime, setStartTime] = useState("10:00");
   const [endTime, setEndTime] = useState("12:00");
@@ -74,29 +76,35 @@ export function TimeSlotDialog() {
 
   // Function to format date and time in local timezone
   const formatDateTime = (isoString: string) => {
-    // Add 6 hours to convert from UTC to Bangladesh time
-    const date = new Date(isoString);
-    date.setHours(date.getHours() + 6);
+    // Create a moment object from the UTC time
+    const utcDate = moment.utc(isoString);
+    
+    // Add 6 hours to convert to local time
+    const localDate = utcDate.add(6, 'hours');
 
     return {
-      date: moment(date).format("LL"),
-      time: moment(date).format("h:mm A"),
+      date: localDate.format("LL"),
+      time: localDate.format("h:mm A"),
+      displayDate: localDate.format("LL"),
+      displayTime: localDate.format("h:mm A")
     };
   };
 
   // Function to create UTC date from local date and time
   const createUTCDateTime = (localDate: Date, timeString: string) => {
     const [hours, minutes] = timeString.split(":").map(Number);
+    
+    // Create a moment object in the local timezone
+    const localDateTime = moment.tz({
+      year: localDate.getFullYear(),
+      month: localDate.getMonth(),
+      date: localDate.getDate(),
+      hour: hours,
+      minute: minutes
+    }, timezone);  // Use the user's timezone
 
-    // Create a new date object for the selected date
-    const date = new Date(localDate);
-
-    // First set the local time
-    date.setHours(hours, minutes, 0, 0);
-
-    // Convert to UTC string
-    const utcDate = new Date(date.getTime() - 6 * 60 * 60 * 1000);
-    return utcDate.toISOString();
+    // Convert to UTC
+    return localDateTime.utc().format();
   };
 
   // Function to fetch all time slots
@@ -123,6 +131,17 @@ export function TimeSlotDialog() {
           new Date(a.start_time).getTime() - new Date(b.start_time).getTime()
       );
       setTimeSlots(sortedSlots);
+      axios
+        .get(`${process.env.NEXT_PUBLIC_IP_ADD}/user/profile`, {
+          headers: {
+            Authorization: `Bearer ${token}`,
+          },
+        })
+        .then((res) => {
+          if (res.status >= 200 && res.status < 300) {
+            setTimeZone(res.data.location);
+          }
+        });
     } catch (error) {
       console.error("Error fetching time slots:", error);
       toast({
@@ -288,36 +307,49 @@ export function TimeSlotDialog() {
         throw new Error("No authentication token found");
       }
 
-      const response = await fetch(
+      const response = await axios.delete(
         `http://localhost:5050/schedules/${slotToDelete.id}`,
         {
-          method: "DELETE",
           headers: {
             Authorization: `Bearer ${token}`,
           },
         }
       );
 
-      if (!response.ok) {
+      if (response.status >= 200 && response.status < 300) {
+        toast({
+          title: "Success",
+          description: "Time slot deleted successfully",
+        });
+        setIsDeleteDialogOpen(false);
+        setSlotToDelete(null);
+      } else {
         throw new Error("Failed to delete time slot");
       }
-
-      await fetchTimeSlots();
-      toast({
-        title: "Success",
-        description: "Time slot deleted successfully",
-      });
-      setIsDeleteDialogOpen(false);
-      setSlotToDelete(null);
-    } catch (error) {
+    } catch (error:any) {
       console.error("Error deleting time slot:", error);
       toast({
         title: "Error",
         description:
-          error instanceof Error ? error.message : "Failed to delete time slot",
+          error.response.data.message ||
+          "Failed to delete time slot",
         variant: "destructive",
       });
     }
+  };
+
+  const convertFromUTC = (utcTimeString: string) => {
+    if (!utcTimeString) return null;
+    
+    // Create a moment object from the UTC string
+    const localMoment = moment(utcTimeString).local();
+    
+    return {
+      date: localMoment.format('YYYY-MM-DD'),
+      time: localMoment.format('HH:mm'),
+      displayDate: localMoment.format('LL'),
+      displayTime: localMoment.format('h:mm A')
+    };
   };
 
   return (
@@ -453,16 +485,13 @@ export function TimeSlotDialog() {
             <CarouselContent>
               {timeSlots.map((slot) => {
                 const start = formatDateTime(slot.start_time);
+                if (!start) {
+                  return null;
+                }
                 const end = formatDateTime(slot.end_time);
-
-                // For debugging
-                console.log("Slot from DB:", {
-                  utcStartTime: slot.start_time,
-                  convertedLocalStart: start.time,
-                  utcEndTime: slot.end_time,
-                  convertedLocalEnd: end.time,
-                });
-
+                if (!end) {
+                  return null;
+                }
                 return (
                   <CarouselItem
                     key={slot.id}
@@ -472,12 +501,10 @@ export function TimeSlotDialog() {
                       <div className="space-y-3">
                         <div className="flex flex-col space-y-2">
                           <h3 className="text-lg font-semibold text-primary">
-                            {start.date}
+                            {start.displayDate}
                           </h3>
                           <Badge
-                            variant={
-                              slot.auto_approve ? "default" : "secondary"
-                            }
+                            variant={slot.auto_approve ? "default" : "secondary"}
                             className="w-fit text-xs px-2 py-0.5"
                           >
                             {slot.auto_approve
@@ -489,7 +516,7 @@ export function TimeSlotDialog() {
                           <div className="flex items-center space-x-2">
                             <Clock className="h-4 w-4 text-muted-foreground" />
                             <p className="text-sm">
-                              {start.time} - {end.time}
+                              {start.displayTime} - {end.displayTime}
                             </p>
                           </div>
                           <div className="flex items-center space-x-2">
@@ -505,11 +532,9 @@ export function TimeSlotDialog() {
                             className="bg-gradient-to-r from-amber-400 to-orange-500 hover:from-amber-500 hover:to-orange-600 text-white transition-all duration-300 transform hover:scale-105 hover:shadow-md flex items-center gap-2 group"
                             onClick={() => {
                               setSelectedSlot(slot);
-                              setDate(new Date(slot.start_time));
-                              setStartTime(
-                                moment(slot.start_time).format("HH:mm")
-                              );
-                              setEndTime(moment(slot.end_time).format("HH:mm"));
+                              setDate(new Date(start.date));
+                              setStartTime(start.time);
+                              setEndTime(end.time);
                               setMinDuration(slot.min_duration);
                               setMaxDuration(slot.max_duration);
                               setAutoApprove(slot.auto_approve);
@@ -553,8 +578,7 @@ export function TimeSlotDialog() {
           <DialogHeader>
             <DialogTitle>Update Time Slot</DialogTitle>
             <DialogDescription>
-              Make changes to your time slot here. Click save when you&apos;re
-              done.
+              Make changes to your time slot here. Click save when you're done.
             </DialogDescription>
           </DialogHeader>
           <div className="grid gap-4 py-4">

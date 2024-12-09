@@ -10,6 +10,7 @@ const sessionRouter = require("./routes/session");
 const userStatsRouter = require("./routes/userstats");
 const { Server } = require("socket.io");
 const jwt = require('jsonwebtoken');
+const adminStatRouter = require("./routes/adminstat");
 
 const app = express();
 const PORT = 5050;
@@ -80,6 +81,7 @@ app.use("/schedules", scheduleRouter);
 app.use("/session", sessionRouter);
 app.use("/userstats", userStatsRouter);
 app.use("/chat", require("./routes/chat"));
+app.use("/adminstat", adminStatRouter);
 
 server.listen(PORT, async () => {
   await connectToDB();
