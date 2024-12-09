@@ -7,6 +7,7 @@ const authRouter = require("./routes/auth");
 const userRouter = require("./routes/user");
 const scheduleRouter = require("./routes/schedules");
 const sessionRouter = require("./routes/session");
+const userStatsRouter = require("./routes/userstats");
 
 const app = express();
 const PORT = 5050;
@@ -27,6 +28,7 @@ app.use("/auth", authRouter);
 app.use("/user", userRouter);
 app.use("/schedules", scheduleRouter);
 app.use("/session", sessionRouter);
+app.use("/userstats", userStatsRouter);
 
 app.listen(PORT, async () => {
   await connectToDB();

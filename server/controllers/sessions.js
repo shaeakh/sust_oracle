@@ -1,12 +1,92 @@
 const { pool } = require("../db/dbconnect");
+const { generateMeetingUrl } = require("../utils/generateMeetingUrl");
+const singleMailService = require("../utils/mailService");
+const { DateTime } = require("luxon");
+
+async function processApprovedSession(session) {
+    try {
+        // Fetch host and guest details
+        const userQuery = `
+            SELECT uid, user_name, user_email 
+            FROM users 
+            WHERE uid IN($1, $2)
+        `;
+        const userResult = await pool.query(userQuery, [session.host_id, session.guest_id]);
+
+        // Ensure that host and guest details are correctly assigned
+        const host = userResult.rows.find(user => user.uid === session.host_id);
+        const guest = userResult.rows.find(user => user.uid === session.guest_id);
+
+        // Check if host and guest are properly found, else throw error
+        if (!host || !guest) {
+            throw new Error('Host or Guest not found');
+        }
+
+        // Generate meeting URL
+        const meetingData = {
+            title: session.title,
+            stime: DateTime.fromISO(session.start_time).toUTC().toFormat('yyyy-MM-dd\'T\'HH:mm:ss\'Z\'')
+        };
+        const { meetingUrl, meeting_host_url } = await generateMeetingUrl(meetingData);
+
+        // Update session with meeting URLs
+        const updateQuery = `
+            UPDATE sessions 
+            SET meeting_url = $1, meeting_host_url = $2 
+            WHERE id = $3
+        `;
+        await pool.query(updateQuery, [meetingUrl, meeting_host_url, session.id]);
+
+        // Send emails to host and guest
+        await sendSessionEmails(session, host, guest, meetingUrl, meeting_host_url);
+    } catch (error) {
+        console.error("Error processing approved session:", error);
+    }
+}
+
+async function sendSessionEmails(session, host, guest, meetingUrl, meeting_host_url) {
+    // Email to host
+    const hostEmailBody = `    
+        <p style="text-align: center;">
+        <img src="https://res.cloudinary.com/djx7nzzzq/image/upload/v1733142971/qgebalt4vovtkeedmkb3.png" style="width: 187px;">
+        </p>
+        <p>Dear ${host.user_name},</p>
+        <p>Your session "${session.title}" has been confirmed.</p>
+        <p>Meeting Link (Host): ${meeting_host_url}</p>
+        <p>Meeting Link (Guest): ${meetingUrl}</p>
+        <p>Start Time: ${DateTime.fromISO(session.start_time).setZone('your-timezone-here').toLocaleString(DateTime.DATETIME_MED)}</p>
+        <p>Guest: ${guest.user_name}</p>
+        <p>Thank you,<br><strong>Team SUST Oracle</strong></p>
+
+    `;
+
+    await singleMailService(host.user_email, "Session Confirmed", hostEmailBody);
+
+    // Email to guest
+    const guestEmailBody = ` 
+        <p style="text-align: center;">
+        <img src="https://res.cloudinary.com/djx7nzzzq/image/upload/v1733142971/qgebalt4vovtkeedmkb3.png" style="width: 187px;">
+        </p>
+        <p>Dear ${guest.user_name},</p>
+        <p>Your session "${session.title}" has been confirmed.</p>
+        <p>Meeting Link: ${meetingUrl}</p>
+        <p>Start Time: ${DateTime.fromISO(session.start_time).setZone('your-timezone-here').toLocaleString(DateTime.DATETIME_MED)}</p>
+        <p>Host: ${host.user_name}</p>
+        <p>Thank you,<br><strong>Team SUST Oracle</strong></p>
+        `
+        ;
+
+    await singleMailService(guest.user_email, "Session Confirmed", guestEmailBody);
+}
+
 
 const getSessionsByUser = async (req, res) => {
     const { uid } = req.user;
 
     try {
         // return all sessions where host_id or guest_id is the user_id and the end_time is in the future
-        const query = `SELECT * FROM sessions WHERE (host_id = $1 OR guest_id = $1) AND end_time > NOW() ORDER BY start_time ASC;`;
-        const result = await pool.query(query, [uid]);
+        const query = `SELECT * FROM sessions WHERE (host_id = $1 OR guest_id = $1) AND end_time > $2::timestamp ORDER BY start_time ASC;`;
+        const result = await pool.query(query, [uid, DateTime.now().toUTC().toISO()]);
 
         res.status(200).json(result.rows);
     } catch (error) {
@@ -23,8 +103,8 @@ const getSessionById = async (req, res) => {
 
     try {
         // return all sessions where host_id or guest_id is the user_id and the end_time is in the future
-        const query = `SELECT * FROM sessions WHERE id = $1 AND (host_id = $2 OR guest_id = $2) AND end_time > NOW() ORDER BY start_time ASC;`;
-        const result = await pool.query(query, [session_id, uid]);
+        const query = `SELECT * FROM sessions WHERE id = $1 AND (host_id = $2 OR guest_id = $2) AND end_time > $3::timestamp ORDER BY start_time ASC;`;
+        const result = await pool.query(query, [session_id, uid, DateTime.now().toUTC().toISO()]);
 
         if (result.rows.length === 0) {
             return res.status(404).json({ message: "Session not found" });
@@ -60,7 +140,9 @@ const createSession = async (req, res) => {
         const schedule = scheduleResult.rows[0];
         const { user_id: host_id, min_duration, max_duration } = schedule;
 
-        const sessionDuration = (new Date(end_time) - new Date(start_time)) / (1000 * 60);
+        const start = DateTime.fromISO(start_time).toUTC();
+        const end = DateTime.fromISO(end_time).toUTC();
+        const sessionDuration = end.diff(start, 'minutes').minutes;
         if (sessionDuration < min_duration || sessionDuration > max_duration) {
             return res.status(400).json({
                 message: `Session duration must be between ${min_duration} and ${max_duration} minutes`,
@@ -83,7 +165,7 @@ const createSession = async (req, res) => {
         const hostOverlapQuery = `
             SELECT * FROM sessions 
             WHERE host_id = $1 
-              AND NOT ($2 >= end_time OR $3 <= start_time)
+              AND NOT ($2::timestamp >= end_time OR $3::timestamp <= start_time)
               AND status = true
         `;
         const hostOverlapValues = [host_id, start_time, end_time];
@@ -97,7 +179,7 @@ const createSession = async (req, res) => {
         const guestOverlapQuery = `
             SELECT * FROM sessions 
             WHERE guest_id = $1 
-              AND NOT ($2 >= end_time OR $3 <= start_time)
+              AND NOT ($2::timestamp >= end_time OR $3::timestamp <= start_time)
               AND status = true
         `;
         const guestOverlapValues = [guest_id, start_time, end_time];
@@ -116,6 +198,17 @@ const createSession = async (req, res) => {
         `;
         const insertValues = [host_id, guest_id, schedule_id, start_time, end_time, title, status];
         const insertResult = await pool.query(insertQuery, insertValues);
+
+        const updateTotalMeetingQuery = `
+            UPDATE users 
+            SET total_meeting = total_meeting + 1
+            WHERE uid = $1
+        `;
+        await pool.query(updateTotalMeetingQuery, [guest_id]);
+
+        if (status) {
+            await processApprovedSession(insertResult.rows[0]);
+        }
 
         res.status(201).json(insertResult.rows[0]);
     } catch (error) {
@@ -145,16 +238,24 @@ const approveSession = async (req, res) => {
         const updateValues = [session_id];
         const updateResult = await pool.query(updateQuery, updateValues);
 
+        // Process the approved session
+        await processApprovedSession(updateResult.rows[0]);
+
         // Delete all overlapping sessions for the host with status false
         const deleteQuery = `
             DELETE FROM sessions 
             WHERE host_id = $1 
               AND status = false
-              AND NOT ($2 >= end_time OR $3 <= start_time)
+              AND NOT ($2::timestamp >= end_time OR $3::timestamp <= start_time)
               AND id != $4
             RETURNING *;
         `;
-        const deleteValues = [host_id, start_time, end_time, session_id];
+        const deleteValues = [
+            host_id,
+            DateTime.fromISO(start_time).toUTC().toISO(),
+            DateTime.fromISO(end_time).toUTC().toISO(),
+            session_id
+        ];
         const deleteResult = await pool.query(deleteQuery, deleteValues);
 
         // Return the approved session and deleted sessions for reference
@@ -211,7 +312,7 @@ const getCustomSessionsByUser = async (req, res) => {
         const sessionsResult = await pool.query(sessionsQuery, [user_id]);
 
         if (sessionsResult.rows.length === 0) {
-            return res.status(404).json({ message: "No sessions found for the user" });
+            return res.json([]);
         }
 
         // Iterate through the sessions and construct the response
@@ -242,8 +343,8 @@ const getCustomSessionsByUser = async (req, res) => {
                     id: session.id,
                     host_id: session.host_id,
                     schedule_id: session.schedule_id,
-                    stime: session.start_time,
-                    etime: session.end_time,
+                    stime: DateTime.fromISO(session.start_time).toUTC().toISO(),
+                    etime: DateTime.fromISO(session.end_time).toUTC().toISO(),
                     title: session.title,
                     meeting_url: isAuthorized ? (uid === host_id ? meeting_host_url : meeting_url) : null,
                     status: session.status,
