@@ -1,8 +1,10 @@
 "use client";
 
 import axios from "axios";
+import html2canvas from "html2canvas";
 import { jsPDF } from "jspdf";
 import { Download } from "lucide-react";
+import { marked } from "marked";
 import { useState } from "react";
 
 import BarChart from "@/components/admin_panel/barchart";
@@ -44,20 +46,30 @@ export default function AdminPanel() {
       );
 
       if (response.data.success && response.data.report) {
+        // Convert Markdown to HTML
+        const markdownHTML = await marked(response.data.report);
+
+        // Create a temporary div
+        const container = document.createElement("div");
+        container.innerHTML = markdownHTML;
+        container.style.width = "800px"; // Adjust width as needed
+        container.style.padding = "20px";
+        document.body.appendChild(container);
+
+        // Generate canvas from the HTML
+        const canvas = await html2canvas(container);
+        const imgData = canvas.toDataURL("image/png");
+
         // Create PDF
-        const doc = new jsPDF();
+        const doc = new jsPDF("p", "mm", "a4");
+        const pdfWidth = doc.internal.pageSize.getWidth();
+        const pdfHeight = (canvas.height * pdfWidth) / canvas.width;
 
-        // Add title
-        doc.setFontSize(16);
-        doc.text("Session Data Analysis Report", 20, 20);
-
-        // Add content
-        doc.setFontSize(12);
-        const splitText = doc.splitTextToSize(response.data.report, 170);
-        doc.text(splitText, 20, 40);
-
-        // Download PDF
+        doc.addImage(imgData, "PNG", 0, 0, pdfWidth, pdfHeight);
         doc.save("session-analysis-report.pdf");
+
+        // Clean up
+        document.body.removeChild(container);
         setIsDialogOpen(false);
       }
     } catch (error) {
