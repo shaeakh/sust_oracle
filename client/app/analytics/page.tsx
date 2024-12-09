@@ -12,7 +12,7 @@ import {
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 function page() {
   return (
-    <div>
+    <div className="w-full flex justify-center py-5">
       <Tabs defaultValue="account" className="w-[1000px]">
         <TabsList className="grid w-full grid-cols-3">
           <TabsTrigger value="Chart_1">Chart_1</TabsTrigger>
