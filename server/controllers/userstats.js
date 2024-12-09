@@ -106,6 +106,16 @@ const getAcceptanceRate = async (req, res) => {
     const { user_id } = req.params;
 
     try {
+        // Query to get the total number of meetings (both hosted and attended)
+        const totalMeetingQuery = `
+            SELECT 
+                (SELECT COUNT(*) FROM sessions WHERE host_id = $1) +
+                (SELECT COUNT(*) FROM sessions WHERE guest_id = $1) as total_meeting
+            FROM users 
+            WHERE uid = $1
+        `;
+        const totalMeetingResult = await pool.query(totalMeetingQuery, [user_id]);
+
         // Query to get the user's total number of accepted sessions
         const acceptedQuery = `
             SELECT COUNT(*) AS accepted_count
@@ -114,16 +124,16 @@ const getAcceptanceRate = async (req, res) => {
         `;
         const acceptedResult = await pool.query(acceptedQuery, [user_id]);
 
-        // Query to get the user's total number of meetings requested
-        const totalMeetingQuery = `
-            SELECT total_meeting
-            FROM users
-            WHERE uid = $1
-        `;
-        const totalMeetingResult = await pool.query(totalMeetingQuery, [user_id]);
+        // Check if user exists
+        if (!totalMeetingResult.rows.length) {
+            return res.status(404).json({
+                success: false,
+                message: "User not found"
+            });
+        }
 
-        const totalMeeting = totalMeetingResult.rows[0].total_meeting;
-        const acceptedCount = parseInt(acceptedResult.rows[0].accepted_count, 10);
+        const totalMeeting = parseInt(totalMeetingResult.rows[0]?.total_meeting || 0, 10);
+        const acceptedCount = parseInt(acceptedResult.rows[0]?.accepted_count || 0, 10);
 
         // Calculate the acceptance rate
         const acceptanceRate = totalMeeting > 0
@@ -132,7 +142,7 @@ const getAcceptanceRate = async (req, res) => {
 
         // Return acceptance rate, total meetings requested, and accepted sessions
         res.status(200).json({
-            acceptance_rate: acceptanceRate.toFixed(2),
+            acceptance_rate: Math.min(100, acceptanceRate).toFixed(2), // Cap at 100%
             total_meeting: totalMeeting,
             total_accepted: acceptedCount
         });
