@@ -1,7 +1,7 @@
 "use client";
 
 import BarChart from "@/components/admin_panel/barchart";
-import Line_chart from "@/components/admin_panel/line_chart";
+import { Barchart2 } from "@/components/admin_panel/Barchart2";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 export default function AdminPanel() {
   return (
@@ -21,7 +21,7 @@ export default function AdminPanel() {
               </div>
             </TabsContent>
             <TabsContent value="day_graph">
-              <Line_chart />
+              <Barchart2 />
             </TabsContent>
           </Tabs>
         </div>
