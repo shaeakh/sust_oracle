@@ -1,5 +1,93 @@
 # ER Diagram
 <img src="https://github.com/user-attachments/assets/c52c3b74-36e6-4012-98c3-9ca713c96441">
+# **Project Overview: Meeting Management System**  
+
+Welcome to our Meeting Management System, a comprehensive web-based platform designed to streamline scheduling, meeting management, and real-time collaboration. This project leverages modern web technologies and microservices to provide an intuitive experience for managing professional meetings and user interactions.
+
+---
+
+## **Tech Stack**  
+
+### **Frontend**  
+- **TypeScript**  
+- **Next.js**  
+
+### **Backend**  
+- **JavaScript**  
+- **Express.js**  
+
+### **Database**  
+- **PostgreSQL**  
+
+### **Microservices**  
+- **NodeMailer** - For transactional emails  
+- **Socket.io** - Real-time data streaming  
+- **OpenAI API** - Personalized report generation  
+
+---
+
+## **Core Features**  
+
+1. **Authentication & Security**  
+   - Secure login and registration with full validation  
+   - Email verification for account activation  
+
+2. **Role-based Meeting Management**  
+   - Hosts manage meetings while guests book sessions  
+   - Access permissions based on roles  
+
+3. **Time Zone & Localization**  
+   - Schedule meetings in local time zones  
+   - Automatic UTC conversion for global compatibility  
+
+4. **Interactive Dashboard**  
+   - Visual meeting schedule with time slot management  
+   - Real-time updates and meeting summaries  
+
+5. **Session Management**  
+   - Hosts can edit or delete sessions anytime  
+   - Sessions marked as "Available" or "Booked"  
+
+6. **Slot Booking Algorithm**  
+   - Priority-based meeting requests  
+   - Requests sorted by guest acceptance rates for fairness  
+
+7. **Community & Networking**  
+   - Discover new people to meet  
+   - View detailed user profiles  
+
+8. **Real-time Chat**  
+   - One-on-one messaging with real-time updates  
+   - Seamless data synchronization using Socket.io  
+
+9. **Meeting Requests & Unique Links**  
+   - Unique session booking links for easy sharing  
+   - Personalized request submissions  
+
+10. **Analytics & Insights**  
+    - **Admin Analytics:** Daily meeting summaries and user stats  
+    - **User Analytics:** Meeting summaries, acceptance ratios, and popular meeting times  
+
+11. **Notifications & Alerts**  
+    - Push notifications and email alerts for new requests  
+    - Real-time session updates  
+
+12. **Personalized Reports**  
+    - Automated report generation using OpenAI API  
+    - Downloadable insights for business analysis  
+
+---
+
+## **Bonus Features**  
+
+1. **Admin Panel**  
+   - Advanced management interface for platform administrators  
+
+2. **Conflict Resolution**  
+   - Built-in conflict management for overlapping schedules  
+
+3. **Real-time Notifications**  
+   - Email alerts to hosts upon receiving requests  
 
 
 # API Documentation
