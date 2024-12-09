@@ -1,5 +1,4 @@
 "use client";
-
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Calendar } from "@/components/ui/calendar";
@@ -30,6 +29,8 @@ import {
 } from "@/components/ui/popover";
 import { useToast } from "@/components/ui/use-toast";
 import { cn } from "@/lib/utils";
+import { utc_to_ur_date, utc_to_ur_time } from "@/utils/utc_to_ur_time_zone";
+import axios from "axios";
 import {
   BarChart2,
   CalendarIcon,
@@ -57,6 +58,7 @@ interface TimeSlot {
 }
 
 export function TimeSlotDialog() {
+  const [timezone, setTimeZone] = useState("Asia/Dhaka");
   const [date, setDate] = useState<Date>();
   const [startTime, setStartTime] = useState("10:00");
   const [endTime, setEndTime] = useState("12:00");
@@ -123,6 +125,17 @@ export function TimeSlotDialog() {
           new Date(a.start_time).getTime() - new Date(b.start_time).getTime()
       );
       setTimeSlots(sortedSlots);
+      axios
+        .get(`${process.env.NEXT_PUBLIC_IP_ADD}/user/profile`, {
+          headers: {
+            Authorization: `Bearer ${token}`,
+          },
+        })
+        .then((res) => {
+          if (res.status >= 200 && res.status < 300) {
+            setTimeZone(res.data.location);
+          }
+        });
     } catch (error) {
       console.error("Error fetching time slots:", error);
       toast({
@@ -454,15 +467,6 @@ export function TimeSlotDialog() {
               {timeSlots.map((slot) => {
                 const start = formatDateTime(slot.start_time);
                 const end = formatDateTime(slot.end_time);
-
-                // For debugging
-                console.log("Slot from DB:", {
-                  utcStartTime: slot.start_time,
-                  convertedLocalStart: start.time,
-                  utcEndTime: slot.end_time,
-                  convertedLocalEnd: end.time,
-                });
-
                 return (
                   <CarouselItem
                     key={slot.id}
@@ -472,7 +476,7 @@ export function TimeSlotDialog() {
                       <div className="space-y-3">
                         <div className="flex flex-col space-y-2">
                           <h3 className="text-lg font-semibold text-primary">
-                            {start.date}
+                            {utc_to_ur_date(slot.start_time, timezone)}
                           </h3>
                           <Badge
                             variant={
@@ -489,7 +493,8 @@ export function TimeSlotDialog() {
                           <div className="flex items-center space-x-2">
                             <Clock className="h-4 w-4 text-muted-foreground" />
                             <p className="text-sm">
-                              {start.time} - {end.time}
+                              {utc_to_ur_time(slot.start_time, timezone)} -{" "}
+                              {utc_to_ur_time(slot.end_time, timezone)}
                             </p>
                           </div>
                           <div className="flex items-center space-x-2">

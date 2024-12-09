@@ -45,7 +45,7 @@ export function MeetingList({ meetings }: MeetingListProps) {
   }, [] as Meeting[][]);
 
   return (
-    <div className="relative min-h-[600px] pl-16">
+    <div className="relative w-full pl-16 ">
       <TimeLabels meetings={meetings} />
       <div className="grid h-full grid-cols-[repeat(auto-fill,minmax(250px,1fr))] gap-4">
         {columns.map((column, colIndex) => (

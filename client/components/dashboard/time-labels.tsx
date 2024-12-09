@@ -103,7 +103,7 @@ export function TimeLabels({ meetings }: TimeLabelsProps) {
             onChange={handleStartHourChange}
             min={0}
             max={23}
-            className="w-16 p-2 border border-gray-300 rounded"
+            className="w-16 p-2 border bg-white border-gray-300 rounded"
           />
         </div>
         <div className="flex items-center">
@@ -120,7 +120,7 @@ export function TimeLabels({ meetings }: TimeLabelsProps) {
             onChange={handleEndHourChange}
             min={0}
             max={23}
-            className="w-16 p-2 border border-gray-300 rounded"
+            className="w-16 p-2 border bg-white border-gray-300 rounded"
           />
         </div>
       </div>
