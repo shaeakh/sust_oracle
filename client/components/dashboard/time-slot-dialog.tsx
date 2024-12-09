@@ -29,7 +29,12 @@ import {
 } from "@/components/ui/popover";
 import { useToast } from "@/components/ui/use-toast";
 import { cn } from "@/lib/utils";
-import { utc_to_ur_date, utc_to_ur_time } from "@/utils/utc_to_ur_time_zone";
+import {
+  our_time_to_utc_time,
+  utc_to_ur_date,
+  utc_to_ur_time,
+} from "@/utils/utc_to_ur_time_zone";
+import axios from "axios";
 import {
   BarChart2,
   CalendarIcon,
@@ -57,6 +62,7 @@ interface TimeSlot {
 }
 
 export function TimeSlotDialog() {
+  const [timezone, setTimeZone] = useState("Asia/Dhaka");
   const [date, setDate] = useState<Date>();
   const [startTime, setStartTime] = useState("10:00");
   const [endTime, setEndTime] = useState("12:00");
@@ -123,6 +129,17 @@ export function TimeSlotDialog() {
           new Date(a.start_time).getTime() - new Date(b.start_time).getTime()
       );
       setTimeSlots(sortedSlots);
+      axios
+        .get(`${process.env.NEXT_PUBLIC_IP_ADD}/user/profile`, {
+          headers: {
+            Authorization: `Bearer ${token}`,
+          },
+        })
+        .then((res) => {
+          if (res.status >= 200 && res.status < 300) {
+            setTimeZone(res.data.location);
+          }
+        });
     } catch (error) {
       console.error("Error fetching time slots:", error);
       toast({
@@ -165,20 +182,25 @@ export function TimeSlotDialog() {
         throw new Error("No authentication token found");
       }
 
-      const response = await fetch("http://localhost:5050/schedules", {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-          Authorization: `Bearer ${token}`,
-        },
-        body: JSON.stringify({
-          start_time: startDateTime,
-          end_time: endDateTime,
-          min_duration: parseInt(minDuration.toString()),
-          max_duration: parseInt(maxDuration.toString()),
-          auto_approve: autoApprove,
-        }),
-      });
+      
+
+      const response = await fetch(
+        `${process.env.NEXT_PUBLIC_IP_ADD}/schedules`,
+        {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+            Authorization: `Bearer ${token}`,
+          },
+          body: JSON.stringify({
+            start_time: our_time_to_utc_time(startDateTime, timezone),
+            end_time: our_time_to_utc_time(endDateTime, timezone),
+            min_duration: parseInt(minDuration.toString()),
+            max_duration: parseInt(maxDuration.toString()),
+            auto_approve: autoApprove,
+          }),
+        }
+      );
 
       if (!response.ok) {
         const errorData = await response.json().catch(() => null);
@@ -463,7 +485,7 @@ export function TimeSlotDialog() {
                       <div className="space-y-3">
                         <div className="flex flex-col space-y-2">
                           <h3 className="text-lg font-semibold text-primary">
-                            {utc_to_ur_date(slot.start_time)}
+                            {utc_to_ur_date(slot.start_time, timezone)}
                           </h3>
                           <Badge
                             variant={
@@ -480,8 +502,8 @@ export function TimeSlotDialog() {
                           <div className="flex items-center space-x-2">
                             <Clock className="h-4 w-4 text-muted-foreground" />
                             <p className="text-sm">
-                              {utc_to_ur_time(slot.start_time)} -{" "}
-                              {utc_to_ur_time(slot.end_time)}
+                              {utc_to_ur_time(slot.start_time, timezone)} -{" "}
+                              {utc_to_ur_time(slot.end_time, timezone)}
                             </p>
                           </div>
                           <div className="flex items-center space-x-2">
