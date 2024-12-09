@@ -416,3 +416,11 @@ This documentation covers the endpoints for authentication, user management, sch
     "report": "## Session Data Analysis Report\n\n### Key Insights:\n- Highest meetings on December 9, 2024.\n- Average meeting duration: 45 minutes.\n\n### Recommendations:\n- Consider optimizing meeting times.\n"
 }
 ```
+
+
+# Team Intro : SUST_Oracle
+
+**Nixon Deb Antu**
+**Shaeakh Ahmed Chowdhury**
+**Arnob Sen**
+
