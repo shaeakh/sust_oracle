@@ -1,20 +1,21 @@
 const { pool } = require("../db/dbconnect");
 const { DateTime } = require("luxon");
+const { localToUTC, UTCToLocal, formatDateTime } = require("../utils/timeUtils");
 
 const populateTimeSlots = async (schedule_id, start_time, end_time, min_duration) => {
     const slots = [];
     let slot_start = DateTime.fromISO(start_time, { zone: "utc" });
-const slot_end = DateTime.fromISO(end_time, { zone: "utc" });
+    const slot_end = DateTime.fromISO(end_time, { zone: "utc" });
 
-while (slot_start.plus({ minutes: min_duration }) <= slot_end) {
-    const slot_end_time = slot_start.plus({ minutes: min_duration });
-    slots.push([
-        schedule_id,
-        slot_start.toISO(),
-        slot_end_time.toISO(),
-    ]);
-    slot_start = slot_end_time;
-}
+    while (slot_start.plus({ minutes: min_duration }) <= slot_end) {
+        const slot_end_time = slot_start.plus({ minutes: min_duration });
+        slots.push([
+            schedule_id,
+            slot_start.toISO(),
+            slot_end_time.toISO(),
+        ]);
+        slot_start = slot_end_time;
+    }
 
     if (slots.length > 0) {
         const query = `
@@ -27,8 +28,8 @@ while (slot_start.plus({ minutes: min_duration }) <= slot_end) {
 };
 
 const createSchedule = async (req, res) => {
-    const { start_time, end_time, min_duration, max_duration, auto_approve } = req.body;
     const { uid } = req.user;
+    const { start_time, end_time, min_duration, max_duration, auto_approve } = req.body;
 
     if (!start_time || !end_time || !min_duration || !max_duration || auto_approve === undefined) {
         return res.status(400).json({ message: "All fields are required" });
@@ -43,6 +44,10 @@ const createSchedule = async (req, res) => {
     }    
 
     try {
+        // Convert local times to UTC before storing
+        const utcStartTime = localToUTC(start_time);
+        const utcEndTime = localToUTC(end_time);
+
         // Check for overlapping schedules
         const overlapQuery = `
             SELECT * FROM schedules 
@@ -51,8 +56,8 @@ const createSchedule = async (req, res) => {
         `;
         const overlapValues = [
             uid,
-            DateTime.fromISO(start_time, { zone: "utc" }).toISO(),
-            DateTime.fromISO(end_time, { zone: "utc" }).toISO(),
+            utcStartTime,
+            utcEndTime,
         ];        
         const overlapResult = await pool.query(overlapQuery, overlapValues);
 
@@ -68,8 +73,8 @@ const createSchedule = async (req, res) => {
         `;
         const values = [
             uid,
-            DateTime.fromISO(start_time, { zone: "utc" }).toISO(),
-            DateTime.fromISO(end_time, { zone: "utc" }).toISO(),
+            utcStartTime,
+            utcEndTime,
             min_duration,
             max_duration,
             auto_approve,
@@ -77,19 +82,23 @@ const createSchedule = async (req, res) => {
         const result = await pool.query(query, values);
 
         // Populate time slots in the schedule_availability table
-        await populateTimeSlots(result.rows[0].id, start_time, end_time, min_duration);
+        await populateTimeSlots(result.rows[0].id, utcStartTime, utcEndTime, min_duration);
+
+        // Convert times back to local timezone for response
+        const schedule = result.rows[0];
+        schedule.start_time = UTCToLocal(schedule.start_time);
+        schedule.end_time = UTCToLocal(schedule.end_time);
 
         // Return the response with the inserted schedule
-        const responseSchedule = result.rows[0];
-        res.status(200).json([{
-            id: responseSchedule.id,
-            user_id: responseSchedule.user_id,
-            start_time: responseSchedule.start_time,  // Assuming the time is already in UTC in the database
-            end_time: responseSchedule.end_time,      // Same assumption here
-            min_duration: responseSchedule.min_duration,
-            max_duration: responseSchedule.max_duration,
-            auto_approve: responseSchedule.auto_approve,
-        }]);
+        res.status(201).json({
+            id: schedule.id,
+            user_id: schedule.user_id,
+            start_time: schedule.start_time,  
+            end_time: schedule.end_time,      
+            min_duration: schedule.min_duration,
+            max_duration: schedule.max_duration,
+            auto_approve: schedule.auto_approve,
+        });
     } catch (error) {
         console.error(error);
         res.status(500).json({ message: "Failed to create schedule" });
@@ -107,8 +116,8 @@ const getAllSchedules = async (req, res) => {
         const responseSchedules = result.rows.map(schedule => ({
             id: schedule.id,
             user_id: schedule.user_id,
-            start_time: schedule.start_time,  // Ensure this is in UTC
-            end_time: schedule.end_time,      // Ensure this is in UTC
+            start_time: UTCToLocal(schedule.start_time),  
+            end_time: UTCToLocal(schedule.end_time),      
             min_duration: schedule.min_duration,
             max_duration: schedule.max_duration,
             auto_approve: schedule.auto_approve,
@@ -135,11 +144,13 @@ const getScheduleById = async (req, res) => {
 
         // Return the schedule in the expected format
         const schedule = result.rows[0];
+        schedule.start_time = UTCToLocal(schedule.start_time);
+        schedule.end_time = UTCToLocal(schedule.end_time);
         res.status(200).json({
             id: schedule.id,
             user_id: schedule.user_id,
-            start_time: schedule.start_time,  // Ensure this is in UTC
-            end_time: schedule.end_time,      // Ensure this is in UTC
+            start_time: schedule.start_time,  
+            end_time: schedule.end_time,      
             min_duration: schedule.min_duration,
             max_duration: schedule.max_duration,
             auto_approve: schedule.auto_approve,
@@ -160,6 +171,10 @@ const updateSchedule = async (req, res) => {
     }
 
     try {
+        // Convert local times to UTC before storing
+        const utcStartTime = localToUTC(start_time);
+        const utcEndTime = localToUTC(end_time);
+
         // Check for overlapping schedules (excluding the current one)
         const overlapQuery = `
             SELECT * FROM schedules 
@@ -170,8 +185,8 @@ const updateSchedule = async (req, res) => {
         const overlapValues = [
             uid,
             schedule_id,
-            DateTime.fromISO(start_time, { zone: "utc" }).toISO(),
-            DateTime.fromISO(end_time, { zone: "utc" }).toISO(),
+            utcStartTime,
+            utcEndTime,
         ];        
         const overlapResult = await pool.query(overlapQuery, overlapValues);
 
@@ -187,8 +202,8 @@ const updateSchedule = async (req, res) => {
             RETURNING *
         `;
         const values = [
-            DateTime.fromISO(start_time, { zone: "utc" }).toISO(),
-            DateTime.fromISO(end_time, { zone: "utc" }).toISO(),
+            utcStartTime,
+            utcEndTime,
             min_duration,
             max_duration,
             auto_approve,
@@ -202,15 +217,19 @@ const updateSchedule = async (req, res) => {
         await pool.query(`DELETE FROM schedule_availability WHERE schedule_id = $1`, [schedule_id]);
 
         // Populate new time slots in the schedule_availability table
-        await populateTimeSlots(schedule_id, start_time, end_time, min_duration);
+        await populateTimeSlots(schedule_id, utcStartTime, utcEndTime, min_duration);
+
+        // Convert times back to local timezone for response
+        const updatedSchedule = result.rows[0];
+        updatedSchedule.start_time = UTCToLocal(updatedSchedule.start_time);
+        updatedSchedule.end_time = UTCToLocal(updatedSchedule.end_time);
 
         // Return the updated schedule in the expected format
-        const updatedSchedule = result.rows[0];
         res.status(200).json({
             id: updatedSchedule.id,
             user_id: updatedSchedule.user_id,
-            start_time: updatedSchedule.start_time,  // Ensure this is in UTC
-            end_time: updatedSchedule.end_time,      // Ensure this is in UTC
+            start_time: updatedSchedule.start_time,  
+            end_time: updatedSchedule.end_time,      
             min_duration: updatedSchedule.min_duration,
             max_duration: updatedSchedule.max_duration,
             auto_approve: updatedSchedule.auto_approve,
@@ -226,23 +245,7 @@ const deleteSchedule = async (req, res) => {
     const { uid } = req.user;
 
     try {
-        // First check if there are any associated sessions
-        const sessionQuery = `
-            SELECT COUNT(*) 
-            FROM sessions 
-            WHERE schedule_id = $1
-        `;
-        const sessionResult = await pool.query(sessionQuery, [schedule_id]);
-        const sessionCount = parseInt(sessionResult.rows[0].count);
-
-        if (sessionCount > 0) {
-            return res.status(409).json({ 
-                message: "Cannot delete schedule that has existing appointments. Please cancel all appointments first.",
-                sessionCount
-            });
-        }
-
-        // If no sessions exist, proceed with deletion
+        // Delete schedule and its availability slots
         await pool.query(`DELETE FROM schedule_availability WHERE schedule_id = $1`, [schedule_id]);
 
         const query = `
@@ -252,12 +255,7 @@ const deleteSchedule = async (req, res) => {
         `;
         const values = [schedule_id, uid];
         const result = await pool.query(query, values);
-
-        if (result.rows.length === 0) {
-            return res.status(404).json({ message: "Schedule not found or you don't have permission to delete it" });
-        }
-
-        res.status(200).json(result.rows[0]);
+        res.status(200).json(result.rows);
     } catch (error) {
         console.error(error);
         res.status(500).json({ message: "Failed to delete schedule" });

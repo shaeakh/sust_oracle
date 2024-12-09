@@ -7,7 +7,7 @@ router.get("/", validateJWT, getSessionsByUser);
 router.get("/custom/:user_id", validateJWT, getCustomSessionsByUser);
 router.get("/:session_id", validateJWT, getSessionById);
 router.post("/", validateJWT, createSession);
-router.put("/approve/:session_id", validateJWT, approveSession);
+router.post("/approve/:session_id", validateJWT, approveSession);
 router.delete("/:session_id", validateJWT, deleteSession);
 
 module.exports = router;
