@@ -26,9 +26,13 @@ const utc_to_ur_date = (
 };
 
 const our_time_to_utc_time = (time: string, urTimeZone: string) => {
-  const dt = DateTime.fromFormat(time, "hh:mm a", { zone: urTimeZone });
-  return dt.toFormat("yyyy-MM-dd'T'HH:mm:ss'Z'");
+  // Create DateTime object in the source timezone
+  const dt = DateTime.fromFormat(time, "yyyy-MM-dd'T'HH:mm:ss", {
+    zone: urTimeZone,
+  });
+
+  // Convert to UTC and format
+  return dt.toUTC().toFormat("yyyy-MM-dd'T'HH:mm:ss'Z'");
 };
 
-
-export { utc_to_ur_date, utc_to_ur_time,our_time_to_utc_time };
+export { our_time_to_utc_time, utc_to_ur_date, utc_to_ur_time };

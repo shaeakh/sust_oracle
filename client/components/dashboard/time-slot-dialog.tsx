@@ -29,11 +29,7 @@ import {
 } from "@/components/ui/popover";
 import { useToast } from "@/components/ui/use-toast";
 import { cn } from "@/lib/utils";
-import {
-  our_time_to_utc_time,
-  utc_to_ur_date,
-  utc_to_ur_time,
-} from "@/utils/utc_to_ur_time_zone";
+import { utc_to_ur_date, utc_to_ur_time } from "@/utils/utc_to_ur_time_zone";
 import axios from "axios";
 import {
   BarChart2,
@@ -182,25 +178,20 @@ export function TimeSlotDialog() {
         throw new Error("No authentication token found");
       }
 
-      
-
-      const response = await fetch(
-        `${process.env.NEXT_PUBLIC_IP_ADD}/schedules`,
-        {
-          method: "POST",
-          headers: {
-            "Content-Type": "application/json",
-            Authorization: `Bearer ${token}`,
-          },
-          body: JSON.stringify({
-            start_time: our_time_to_utc_time(startDateTime, timezone),
-            end_time: our_time_to_utc_time(endDateTime, timezone),
-            min_duration: parseInt(minDuration.toString()),
-            max_duration: parseInt(maxDuration.toString()),
-            auto_approve: autoApprove,
-          }),
-        }
-      );
+      const response = await fetch("http://localhost:5050/schedules", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${token}`,
+        },
+        body: JSON.stringify({
+          start_time: startDateTime,
+          end_time: endDateTime,
+          min_duration: parseInt(minDuration.toString()),
+          max_duration: parseInt(maxDuration.toString()),
+          auto_approve: autoApprove,
+        }),
+      });
 
       if (!response.ok) {
         const errorData = await response.json().catch(() => null);
