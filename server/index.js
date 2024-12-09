@@ -8,6 +8,7 @@ const userRouter = require("./routes/user");
 const scheduleRouter = require("./routes/schedules");
 const sessionRouter = require("./routes/session");
 const userStatsRouter = require("./routes/userstats");
+const adminStatRouter = require("./routes/adminstat");
 
 const app = express();
 const PORT = 5050;
@@ -29,6 +30,7 @@ app.use("/user", userRouter);
 app.use("/schedules", scheduleRouter);
 app.use("/session", sessionRouter);
 app.use("/userstats", userStatsRouter);
+app.use("/adminstat", adminStatRouter);
 
 app.listen(PORT, async () => {
   await connectToDB();
