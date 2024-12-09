@@ -333,6 +333,20 @@ export function TimeSlotDialog() {
     }
   };
 
+  const convertFromUTC = (utcTimeString: string) => {
+    if (!utcTimeString) return null;
+    
+    // Create a moment object from the UTC string
+    const localMoment = moment(utcTimeString).local();
+    
+    return {
+      date: localMoment.format('YYYY-MM-DD'),
+      time: localMoment.format('HH:mm'),
+      displayDate: localMoment.format('LL'),
+      displayTime: localMoment.format('h:mm A')
+    };
+  };
+
   return (
     <div className="space-y-8">
       <Dialog open={open} onOpenChange={setOpen}>
@@ -465,8 +479,8 @@ export function TimeSlotDialog() {
           <Carousel className="w-[800px]">
             <CarouselContent>
               {timeSlots.map((slot) => {
-                const start = formatDateTime(slot.start_time);
-                const end = formatDateTime(slot.end_time);
+                const start = convertFromUTC(slot.start_time);
+                const end = convertFromUTC(slot.end_time);
                 return (
                   <CarouselItem
                     key={slot.id}
@@ -476,12 +490,10 @@ export function TimeSlotDialog() {
                       <div className="space-y-3">
                         <div className="flex flex-col space-y-2">
                           <h3 className="text-lg font-semibold text-primary">
-                            {utc_to_ur_date(slot.start_time, timezone)}
+                            {start.displayDate}
                           </h3>
                           <Badge
-                            variant={
-                              slot.auto_approve ? "default" : "secondary"
-                            }
+                            variant={slot.auto_approve ? "default" : "secondary"}
                             className="w-fit text-xs px-2 py-0.5"
                           >
                             {slot.auto_approve
@@ -493,8 +505,7 @@ export function TimeSlotDialog() {
                           <div className="flex items-center space-x-2">
                             <Clock className="h-4 w-4 text-muted-foreground" />
                             <p className="text-sm">
-                              {utc_to_ur_time(slot.start_time, timezone)} -{" "}
-                              {utc_to_ur_time(slot.end_time, timezone)}
+                              {start.displayTime} - {end.displayTime}
                             </p>
                           </div>
                           <div className="flex items-center space-x-2">
@@ -510,11 +521,9 @@ export function TimeSlotDialog() {
                             className="bg-gradient-to-r from-amber-400 to-orange-500 hover:from-amber-500 hover:to-orange-600 text-white transition-all duration-300 transform hover:scale-105 hover:shadow-md flex items-center gap-2 group"
                             onClick={() => {
                               setSelectedSlot(slot);
-                              setDate(new Date(slot.start_time));
-                              setStartTime(
-                                moment(slot.start_time).format("HH:mm")
-                              );
-                              setEndTime(moment(slot.end_time).format("HH:mm"));
+                              setDate(new Date(start.date));
+                              setStartTime(start.time);
+                              setEndTime(end.time);
                               setMinDuration(slot.min_duration);
                               setMaxDuration(slot.max_duration);
                               setAutoApprove(slot.auto_approve);
@@ -558,8 +567,7 @@ export function TimeSlotDialog() {
           <DialogHeader>
             <DialogTitle>Update Time Slot</DialogTitle>
             <DialogDescription>
-              Make changes to your time slot here. Click save when you&apos;re
-              done.
+              Make changes to your time slot here. Click save when you're done.
             </DialogDescription>
           </DialogHeader>
           <div className="grid gap-4 py-4">
