@@ -76,29 +76,35 @@ export function TimeSlotDialog() {
 
   // Function to format date and time in local timezone
   const formatDateTime = (isoString: string) => {
-    // Add 6 hours to convert from UTC to Bangladesh time
-    const date = new Date(isoString);
-    date.setHours(date.getHours() + 6);
+    // Create a moment object from the UTC time
+    const utcDate = moment.utc(isoString);
+    
+    // Add 6 hours to convert to local time
+    const localDate = utcDate.add(6, 'hours');
 
     return {
-      date: moment(date).format("LL"),
-      time: moment(date).format("h:mm A"),
+      date: localDate.format("LL"),
+      time: localDate.format("h:mm A"),
+      displayDate: localDate.format("LL"),
+      displayTime: localDate.format("h:mm A")
     };
   };
 
   // Function to create UTC date from local date and time
   const createUTCDateTime = (localDate: Date, timeString: string) => {
     const [hours, minutes] = timeString.split(":").map(Number);
+    
+    // Create a moment object in the local timezone
+    const localDateTime = moment.tz({
+      year: localDate.getFullYear(),
+      month: localDate.getMonth(),
+      date: localDate.getDate(),
+      hour: hours,
+      minute: minutes
+    }, timezone);  // Use the user's timezone
 
-    // Create a new date object for the selected date
-    const date = new Date(localDate);
-
-    // First set the local time
-    date.setHours(hours, minutes, 0, 0);
-
-    // Convert to UTC string
-    const utcDate = new Date(date.getTime() - 6 * 60 * 60 * 1000);
-    return utcDate.toISOString();
+    // Convert to UTC
+    return localDateTime.utc().format();
   };
 
   // Function to fetch all time slots
@@ -301,33 +307,32 @@ export function TimeSlotDialog() {
         throw new Error("No authentication token found");
       }
 
-      const response = await fetch(
+      const response = await axios.delete(
         `http://localhost:5050/schedules/${slotToDelete.id}`,
         {
-          method: "DELETE",
           headers: {
             Authorization: `Bearer ${token}`,
           },
         }
       );
 
-      if (!response.ok) {
+      if (response.status >= 200 && response.status < 300) {
+        toast({
+          title: "Success",
+          description: "Time slot deleted successfully",
+        });
+        setIsDeleteDialogOpen(false);
+        setSlotToDelete(null);
+      } else {
         throw new Error("Failed to delete time slot");
       }
-
-      await fetchTimeSlots();
-      toast({
-        title: "Success",
-        description: "Time slot deleted successfully",
-      });
-      setIsDeleteDialogOpen(false);
-      setSlotToDelete(null);
-    } catch (error) {
+    } catch (error:any) {
       console.error("Error deleting time slot:", error);
       toast({
         title: "Error",
         description:
-          error instanceof Error ? error.message : "Failed to delete time slot",
+          error.response.data.message ||
+          "Failed to delete time slot",
         variant: "destructive",
       });
     }
@@ -479,8 +484,14 @@ export function TimeSlotDialog() {
           <Carousel className="w-[800px]">
             <CarouselContent>
               {timeSlots.map((slot) => {
-                const start = convertFromUTC(slot.start_time);
-                const end = convertFromUTC(slot.end_time);
+                const start = formatDateTime(slot.start_time);
+                if (!start) {
+                  return null;
+                }
+                const end = formatDateTime(slot.end_time);
+                if (!end) {
+                  return null;
+                }
                 return (
                   <CarouselItem
                     key={slot.id}

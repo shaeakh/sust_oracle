@@ -226,7 +226,23 @@ const deleteSchedule = async (req, res) => {
     const { uid } = req.user;
 
     try {
-        // Delete schedule and its availability slots
+        // First check if there are any associated sessions
+        const sessionQuery = `
+            SELECT COUNT(*) 
+            FROM sessions 
+            WHERE schedule_id = $1
+        `;
+        const sessionResult = await pool.query(sessionQuery, [schedule_id]);
+        const sessionCount = parseInt(sessionResult.rows[0].count);
+
+        if (sessionCount > 0) {
+            return res.status(409).json({ 
+                message: "Cannot delete schedule that has existing appointments. Please cancel all appointments first.",
+                sessionCount
+            });
+        }
+
+        // If no sessions exist, proceed with deletion
         await pool.query(`DELETE FROM schedule_availability WHERE schedule_id = $1`, [schedule_id]);
 
         const query = `
@@ -236,7 +252,12 @@ const deleteSchedule = async (req, res) => {
         `;
         const values = [schedule_id, uid];
         const result = await pool.query(query, values);
-        res.status(200).json(result.rows);
+
+        if (result.rows.length === 0) {
+            return res.status(404).json({ message: "Schedule not found or you don't have permission to delete it" });
+        }
+
+        res.status(200).json(result.rows[0]);
     } catch (error) {
         console.error(error);
         res.status(500).json({ message: "Failed to delete schedule" });
