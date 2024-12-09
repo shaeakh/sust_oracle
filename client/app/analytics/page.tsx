@@ -1,6 +1,6 @@
 import { Barchart } from "@/components/analytics/Barchart";
-import { Linechart } from "@/components/analytics/Linechart";
 import { Pie_Chart } from "@/components/analytics/Pie_Chart";
+import { Radial_Chart } from "@/components/analytics/Radial_Chart";
 import {
   Card,
   CardContent,
@@ -13,7 +13,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 function page() {
   return (
     <div>
-      <Tabs defaultValue="account" className="w-[600px]">
+      <Tabs defaultValue="account" className="w-[1000px]">
         <TabsList className="grid w-full grid-cols-3">
           <TabsTrigger value="Chart_1">Chart_1</TabsTrigger>
           <TabsTrigger value="Chart_2">Chart_2</TabsTrigger>
@@ -50,7 +50,7 @@ function page() {
               <CardDescription>He he he</CardDescription>
             </CardHeader>
             <CardContent className="space-y-2">
-              <Linechart />
+              <Radial_Chart />
             </CardContent>
             <CardFooter>here is card footer</CardFooter>
           </Card>
