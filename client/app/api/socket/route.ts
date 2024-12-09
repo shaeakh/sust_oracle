@@ -1,87 +1,43 @@
 // app/api/socket/route.ts
-import { Server as SocketServer } from 'socket.io';
-import { createServer } from 'http';
-import { NextRequest, NextResponse } from 'next/server';
+import { Server as NetServer } from 'http';
+import { NextApiRequest } from 'next';
+import { Server as ServerIO } from 'socket.io';
+import { NextApiResponseServerIO } from '@/lib/socket';
+ 
 
-let io: SocketServer | null = null;
-let httpServer: any = null;
+export const dynamic = 'force-dynamic';
 
-function setupSocketEvents(io: SocketServer) {
-  io.on('connection', (socket) => {
-    console.log('👤 Client connected:', socket.id);
-
-    // Join a default room
-    socket.join('chat-room');
-
-    socket.on('chat:message', (message) => {
-      console.log('📨 Server received chat message:', message);
-      // Broadcast to all clients in the room
-      io.to('chat-room').emit('chat:message', message);
-      console.log('📤 Server broadcasted message to chat-room');
+export async function GET(req: NextApiRequest, res: NextApiResponseServerIO) {
+  if (!res.socket.server.io) {
+    const httpServer: NetServer = res.socket.server as any;
+    const io = new ServerIO(httpServer, {
+      path: '/api/socket/io',
+      addTrailingSlash: false,
     });
 
-    socket.on('story:update', (story) => {
-      console.log('📖 Story update received:', story);
-      socket.broadcast.emit('story:update', story);
-    });
+    io.on('connection', (socket) => {
+      console.log('Socket connected:', socket.id);
 
-    socket.on('feedback:new', (feedback) => {
-      console.log('👍 New feedback received:', feedback);
-      io.emit('feedback:new', feedback);
-    });
-
-    socket.on('disconnect', () => {
-      console.log('👋 Client disconnected:', socket.id);
-      socket.leave('chat-room');
-    });
-
-    // Handle errors
-    socket.on('error', (error) => {
-      console.error('🚨 Socket error:', error);
-    });
-  });
-}
-
-export async function GET(request: NextRequest) {
-  if (!io) {
-    console.log('🔧 Initializing Socket.IO server...');
-    
-    httpServer = createServer();
-    const port = parseInt(process.env.SOCKET_PORT || '5001', 10);
-    
-    io = new SocketServer(httpServer, {
-      cors: {
-        origin: ['http://localhost:3000', 'http://127.0.0.1:3000'],
-        methods: ['GET', 'POST'],
-        credentials: true
-      },
-      transports: ['websocket', 'polling'],
-      connectionStateRecovery: {
-        maxDisconnectionDuration: 2 * 60 * 1000,
-        skipMiddlewares: true,
-      },
-      pingTimeout: 60000,
-      pingInterval: 25000
-    });
-
-    setupSocketEvents(io);
-
-    try {
-      await new Promise((resolve) => {
-        httpServer.listen(port, '0.0.0.0', () => {
-          console.log(`🌐 Socket.IO server running on port ${port}`);
-          resolve(true);
-        });
+      socket.on('join-chat', ({ userId, otherUserId }) => {
+        const roomId = [userId, otherUserId].sort().join('-');
+        socket.join(roomId);
+        console.log(`User ${userId} joined chat room ${roomId}`);
       });
-    } catch (error) {
-      console.error('❌ Error starting socket server:', error);
-      return NextResponse.json({ error: 'Failed to start socket server' }, { status: 500 });
-    }
+
+      socket.on('chat-message', (message) => {
+        const roomId = [message.sender, message.recipient].sort().join('-');
+        socket.to(roomId).emit('chat-message', message);
+      });
+
+      socket.on('disconnect', () => {
+        console.log('Socket disconnected:', socket.id);
+      });
+    });
+
+    res.socket.server.io = io;
   }
 
-  return NextResponse.json({ 
-    success: true,
-    message: 'Socket.IO server is running',
-    port: process.env.SOCKET_PORT || '5001'
+  return new Response('Socket is running', {
+    status: 200,
   });
 }

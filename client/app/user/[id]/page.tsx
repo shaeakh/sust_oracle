@@ -6,10 +6,11 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { useToast } from "@/components/ui/use-toast";
 import { Meeting } from "@/lib/types/meeting";
 import axios from "axios";
-import { Calendar, Mail, MapPin, Phone, Star, Clock, Users, Video, Sparkles } from "lucide-react";
+import { Calendar, Mail, MapPin, Phone, Star, Clock, Users, Video, Sparkles, MessageCircle } from "lucide-react";
 import { motion } from "framer-motion";
 import { useEffect, useState } from "react";
 import { TimeSlotDisplay } from "@/components/user/time-slot-display";
+import { useRouter } from "next/navigation";
 
 const defaultMeetings: Meeting[] = [
   {
@@ -45,6 +46,7 @@ function Page({ params }: { params: { id: number } }) {
   const [profile, setProfile] = useState<UserProfile | null>(null);
   const [loading, setLoading] = useState(true);
   const { toast } = useToast();
+  const router = useRouter();
 
   useEffect(() => {
     const fetchUserData = async () => {
@@ -82,6 +84,10 @@ function Page({ params }: { params: { id: number } }) {
 
     fetchUserData();
   }, [params.id, toast]);
+
+  const handleChatClick = () => {
+    router.push(`/chat?userId=${params.id}`);
+  };
 
   if (loading) {
     return (
@@ -168,6 +174,15 @@ function Page({ params }: { params: { id: number } }) {
                     <MapPin className="w-4 h-4" />
                     {profile.location}
                   </span>
+                )}
+                {profile && localStorage.getItem('uid') !== profile.uid.toString() && (
+                  <button
+                    onClick={handleChatClick}
+                    className="flex items-center gap-2 hover:text-violet-600 transition-colors bg-violet-100 px-4 py-2 rounded-full font-medium"
+                  >
+                    <MessageCircle className="w-4 h-4" />
+                    Chat Now
+                  </button>
                 )}
               </motion.div>
             </div>
