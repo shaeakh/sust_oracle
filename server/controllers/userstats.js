@@ -142,5 +142,64 @@ const getAcceptanceRate = async (req, res) => {
     }
 };
 
+const getUserSessions = async (req, res) => {
+    const { user_id } = req.query;
+    const range = req.query.range || 'this-week'; // Default to 'this-week'
 
-module.exports = { getUserSessionHistory, getSessionCountByDuration, getAcceptanceRate };
+    if (!user_id) {
+        return res.status(400).json({ message: 'User ID is required' });
+    }
+
+    try {
+        let dateFilterQuery = '';
+        const currentDate = new Date();
+        const startOfWeek = new Date();
+        startOfWeek.setDate(currentDate.getDate() - currentDate.getDay()); // Sunday of this week
+        startOfWeek.setHours(0, 0, 0, 0);
+        
+        switch (range) {
+            case 'today':
+                dateFilterQuery = `AND start_time >= CURRENT_DATE AND start_time < CURRENT_DATE + INTERVAL '1 day'`;
+                break;
+            case 'this-week':
+                dateFilterQuery = `AND start_time >= '${startOfWeek.toISOString()}' AND start_time < '${new Date(startOfWeek.setDate(startOfWeek.getDate() + 7)).toISOString()}'`;
+                break;
+            case 'this-month':
+                dateFilterQuery = `AND start_time >= DATE_TRUNC('month', CURRENT_DATE)`;
+                break;
+            case 'this-year':
+                dateFilterQuery = `AND start_time >= DATE_TRUNC('year', CURRENT_DATE)`;
+                break;
+            case 'life-time':
+                dateFilterQuery = '';
+                break;
+            default:
+                return res.status(400).json({ message: 'Invalid range value' });
+        }
+
+        // SQL query to fetch sessions with status = true
+        const query = `
+            SELECT id, host_id, guest_id, schedule_id, start_time, end_time, title, status
+            FROM sessions
+            WHERE (host_id = $1 OR guest_id = $1) 
+              AND status = true
+              ${dateFilterQuery}
+            ORDER BY start_time DESC
+        `;
+        
+        const result = await pool.query(query, [user_id]);
+        
+        // Check if no sessions are found
+        if (result.rows.length === 0) {
+            return res.status(404).json({ message: 'No sessions found for this user' });
+        }
+
+        // Return sessions as JSON
+        res.status(200).json(result.rows);
+    } catch (error) {
+        console.error('Error fetching user sessions:', error);
+        res.status(500).json({ message: 'Internal server error' });
+    }
+};
+
+module.exports = { getUserSessionHistory, getSessionCountByDuration, getAcceptanceRate, getUserSessions };
