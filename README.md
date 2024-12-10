@@ -417,9 +417,12 @@ This documentation covers the endpoints for authentication, user management, sch
 }
 ```
 
-# Team Intro : SUST_Oracle
-**Nixon Deb Antu**
-**Shaeakh Ahmed Chowdhury**
-**Arnob Sen**
 
+# Team Intro : SUST_Oracle
+
+**Nixon Deb Antu**
+
+**Shaeakh Ahmed Chowdhury**
+
+**Arnob Sen**
 

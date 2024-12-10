@@ -4,55 +4,42 @@ import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
+import { uploadAssetsToCloud } from "@/utils/ImageUploadService";
 import axios from "axios";
 import { motion } from "framer-motion";
 import { Edit, Mail, Save, User } from "lucide-react";
 import { useEffect, useState } from "react";
 import { toast } from "react-toastify";
-import EditableArraySection from "./EditableArraySection";
 
 interface profile_info {
   uid: number;
   user_name: string;
   user_image: string | null;
   user_email: string;
-  age: number | null;
-  gender: string | null;
+  bio: string | null;
+  location: string | null;
   isverified: boolean;
-  skills: string[] | null;
 }
 
-interface ProfileData {
-  name: string;
-  email: string;
-  age: number;
-  gender: string;
-  height: number;
-  weight: number;
-  fitness_level: string;
-  workout_preference: string[];
-  diet_restrictions: string[];
-  health_conditions: string[];
-}
-
-const i: profile_info = {
+const initialD: profile_info = {
   uid: 0,
   user_name: "",
   user_image: null,
   user_email: "",
-  age: 0,
-  gender: "",
+  bio: null,
+  location: null,
   isverified: false,
-  skills: null,
 };
 
 export default function ProfileCard() {
-  const [initialData, setinitialData] = useState<profile_info>(i);
-  const [data, setData] = useState<profile_info>(i);
+  const [initialData, setInitialData] = useState<profile_info>(initialD);
+  const [data, setData] = useState<profile_info>(initialData);
   const [editingField, setEditingField] = useState<string | null>(null);
   const [isChanged, setIsChanged] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
   const token = localStorage.getItem("token");
+  const [dp, setDp] = useState(false);
+  const [dp_file, setDp_file] = useState<File | null>(null);
   const fetch_data = async () => {
     axios
       .get(`${process.env.NEXT_PUBLIC_IP_ADD}/user/profile`, {
@@ -61,10 +48,12 @@ export default function ProfileCard() {
         },
       })
       .then((res) => {
-        setinitialData(res.data);
+        setInitialData(res.data);
         setData(res.data);
+        console.log(res.data);
       });
   };
+
   useEffect(() => {
     setIsChanged(JSON.stringify(data) !== JSON.stringify(initialData));
     fetch_data();
@@ -74,25 +63,33 @@ export default function ProfileCard() {
     setEditingField(field);
   };
 
+  const handle_file_change = (e: React.ChangeEvent<HTMLInputElement>) => {
+    if (e.target.files && e.target.files[0]) {
+      const file = e.target.files[0];
+      setDp_file(file);
+      setIsChanged(true);
+    }
+  };
+
   const handleSave = (field: string, value: string | number) => {
     setData((prevData) => ({ ...prevData, [field]: value }));
     setEditingField(null);
     setIsChanged(true);
   };
 
-  const handleArrayUpdate = (field: keyof profile_info, newArray: string[]) => {
-    setData((prevData) => ({ ...prevData, [field]: newArray }));
-    setIsChanged(true);
-  };
-
   const handleSaveAll = async () => {
+    var dp_url = null;
+    if (dp) {
+      dp_url = await uploadAssetsToCloud(dp_file!);
+    }
+
     if (isLoading) return;
     const temp = {
       user_name: data.user_name,
       user_email: data.user_email,
-      age: data.age,
-      gender: data.gender,
-      skills: data.skills,
+      bio: data.bio,
+      location: data.location,
+      user_image: dp_url || data.user_image,
     };
 
     setIsLoading(true);
@@ -164,36 +161,48 @@ export default function ProfileCard() {
                 handleSave={handleSave}
                 icon={<Mail className="w-4 h-4" />}
               />
+              {dp ? (
+                <Button disabled={isLoading}>
+                  <input
+                    type="file"
+                    onChange={handle_file_change}
+                    accept="image/*"
+                    className="absolute inset-0 w-full h-full opacity-0 cursor-pointer"
+                  />
+                  {isLoading ? "Uploading..." : "Choose File"}
+                </Button>
+              ) : (
+                <Button
+                  onClick={() => {
+                    setDp(true);
+                  }}
+                >
+                  Upload profile picture
+                </Button>
+              )}
             </div>
           </div>
 
           <div className="grid grid-cols-2 gap-4">
             <EditableInfoItem
               icon={<User />}
-              label="Age"
-              value={data.age || ""}
-              field="age"
+              label="Bio"
+              value={data.bio || ""}
+              field="bio"
               editingField={editingField}
               handleEdit={handleEdit}
               handleSave={handleSave}
-              type="number"
             />
             <EditableInfoItem
               icon={<User />}
-              label="Gender"
-              value={data.gender || ""}
-              field="gender"
+              label="Location"
+              value={data.location || ""}
+              field="location"
               editingField={editingField}
               handleEdit={handleEdit}
               handleSave={handleSave}
             />
           </div>
-
-          <EditableArraySection
-            title="Skills"
-            items={data.skills || []}
-            onUpdate={(newArray) => handleArrayUpdate("skills", newArray)}
-          />
         </CardContent>
       </Card>
       {isChanged && (

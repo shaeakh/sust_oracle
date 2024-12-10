@@ -40,8 +40,6 @@ export const RegisterForm: React.FC<RegisterFormProps> = ({
             : null,
       }
     );
-
-  const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
 
   const handleSubmit = (e: React.FormEvent) => {
@@ -61,13 +59,11 @@ export const RegisterForm: React.FC<RegisterFormProps> = ({
             toast.success("Registration successful");
           } else {
             setLoading(false);
-            setError(res?.data?.message || "Registration failed");
             toast.error(res?.data?.message || "Registration failed");
           }
         })
         .catch((err) => {
           setLoading(false);
-          setError(err?.response?.data?.message || "Registration failed");
           toast.error(err?.response?.data?.message || "Registration failed");
         });
     }

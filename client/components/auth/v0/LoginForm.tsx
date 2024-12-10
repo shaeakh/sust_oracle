@@ -48,8 +48,9 @@ export const LoginForm: React.FC<LoginFormProps> = ({ onToggle }) => {
         .then((res) => {
           if (res.status >= 200 && res.status < 300) {
             localStorage.setItem("token", res.data.token);
-            router.push("/dashboard");
+            localStorage.setItem("uid", res.data.uid);
             setClickable(true);
+            router.push("/dashboard");
           } else {
             setError(res?.data?.message || "Login failed");
             setClickable(true);
@@ -63,7 +64,6 @@ export const LoginForm: React.FC<LoginFormProps> = ({ onToggle }) => {
         });
     }
   };
-
   return (
     <div>
       <form onSubmit={handleSubmit} className="space-y-4">

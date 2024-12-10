@@ -17,7 +17,6 @@ import {
   navigationMenuTriggerStyle,
 } from "@/components/ui/navigation-menu";
 import axios from "axios";
-import { Activity } from "lucide-react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import * as React from "react";
@@ -83,6 +82,7 @@ export function Navbar() {
     if (t_token) {
       setIsLoggedIn(true);
       fetch_user_info();
+      console.log(userinfo);
     } else {
       setIsLoggedIn(false);
     }
@@ -92,15 +92,13 @@ export function Navbar() {
       <div className="container flex h-16 items-center justify-between">
         {/* Logo Section */}
         <div className="flex items-center space-x-2">
-          <Activity className="h-6 w-6" />
-          <Link href="/" className="-m-1.5 p-1.5 flex items-center space-x-2">
-            <span className="text-xl text-blue-500 font-thin font-mono">
-              Project
-            </span>
-            <span className="text-xl font-extrabold text-blue-800 font-mono">
-              Name
-            </span>
-          </Link>
+          <a href="/">
+            <img
+              src="https://raw.githubusercontent.com/shaeakh/code-share/refs/heads/main/sust_oracle/logo.png"
+              alt="ADDUTOR"
+              className="w-56"
+            />
+          </a>
         </div>
 
         {/* Navigation Links */}
@@ -173,7 +171,10 @@ export function Navbar() {
                   >
                     <img
                       className="rounded-full"
-                      src={userinfo?.user_image || ""}
+                      src={
+                        userinfo?.user_image ||
+                        "https://cdn.pixabay.com/photo/2015/10/05/22/37/blank-profile-picture-973460_1280.png"
+                      }
                       alt={userinfo?.user_name || ""}
                     />
                   </button>
@@ -189,22 +190,6 @@ export function Navbar() {
                         Profile
                       </DropdownMenuRadioItem>
                     </Link>
-                    <Link href="/settings">
-                      <DropdownMenuRadioItem
-                        className=" active:text-white focus:text-white"
-                        value="Settings"
-                      >
-                        Settings
-                      </DropdownMenuRadioItem>
-                    </Link>
-                    <Link href="/forum">
-                      <DropdownMenuRadioItem
-                        className=" active:text-white focus:text-white"
-                        value="Forum"
-                      >
-                        Forum
-                      </DropdownMenuRadioItem>
-                    </Link>
                     <Link href="/dashboard">
                       <DropdownMenuRadioItem
                         className=" active:text-white focus:text-white"
@@ -213,6 +198,23 @@ export function Navbar() {
                         Dashboard
                       </DropdownMenuRadioItem>
                     </Link>
+                    <Link href="/community">
+                      <DropdownMenuRadioItem
+                        className=" active:text-white focus:text-white"
+                        value="Forum"
+                      >
+                        Community
+                      </DropdownMenuRadioItem>
+                    </Link>
+                    <Link href="/admin_panel">
+                      <DropdownMenuRadioItem
+                        className=" active:text-white focus:text-white"
+                        value="Forum"
+                      >
+                        Admin Panel
+                      </DropdownMenuRadioItem>
+                    </Link>
+
                     <DropdownMenuRadioItem
                       className=" active:text-white focus:text-white"
                       onClick={handle_logout}
